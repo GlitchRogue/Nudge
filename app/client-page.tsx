@@ -1,6 +1,7 @@
-'use client'
+import ClientPage from './client-page'
 
-export const dynamic = 'force-dynamic'
+export default function Page() {
+  return <ClientPage />
 import { useState, useEffect, useCallback } from 'react'
 import { TopNav } from '@/components/campus-agent/top-nav'
 import { SuggestionsPanel } from '@/components/campus-agent/suggestions-panel'
