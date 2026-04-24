@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { TopNav } from '@/components/campus-agent/top-nav'
 import { SuggestionsPanel } from '@/components/campus-agent/suggestions-panel'
 import { ChatInterface } from '@/components/campus-agent/chat-interface'
@@ -10,20 +11,38 @@ import { generateSuggestions } from '@/lib/agent'
 import { calendarEvents, EventSuggestion } from '@/lib/mockData'
 
 export default function CampusAgentPage() {
+  const router = useRouter()
+  const [authChecked, setAuthChecked] = useState(false)
   const [activeTab, setActiveTab] = useState<'suggestions' | 'group'>('suggestions')
   const [suggestions, setSuggestions] = useState<EventSuggestion[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [addedEventIds, setAddedEventIds] = useState<Set<string>>(new Set())
 
-  // Generate suggestions on mount
+  // Auth gate: redirect to /login if user hasn't "connected" their calendar
   useEffect(() => {
+    try {
+      const user = localStorage.getItem('nudge-user')
+      if (!user) {
+        router.replace('/login')
+        return
+      }
+      setAuthChecked(true)
+    } catch (e) {
+      // localStorage unavailable (e.g. SSR); default to letting them in
+      setAuthChecked(true)
+    }
+  }, [router])
+
+  // Generate suggestions on mount (only after auth check passes)
+  useEffect(() => {
+    if (!authChecked) return
     const timer = setTimeout(() => {
       setSuggestions(generateSuggestions())
       setIsLoading(false)
     }, 1200)
 
     return () => clearTimeout(timer)
-  }, [])
+  }, [authChecked])
 
   const handleReset = useCallback(() => {
     setIsLoading(true)
@@ -50,6 +69,15 @@ export default function CampusAgentPage() {
     // Approve the rearrangement and add to calendar
     handleAddToCalendar(eventId)
   }, [handleAddToCalendar])
+
+  // Show a blank screen while we check auth (prevents flash of content before redirect)
+  if (!authChecked) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600" />
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-screen flex-col bg-background">
