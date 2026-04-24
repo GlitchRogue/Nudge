@@ -1,37 +1,18 @@
-'use client'
+import { redirect } from "next/navigation"
+import { auth, signIn } from "@/auth"
+import { Sparkles } from "lucide-react"
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Calendar, Sparkles, Check } from 'lucide-react'
-
-export default function LoginPage() {
-  const router = useRouter()
-  const [step, setStep] = useState<'signin' | 'connecting' | 'connected'>('signin')
-
-  const handleSignIn = () => {
-    setStep('connecting')
-    // Simulate the Google OAuth + calendar connection flow
-    setTimeout(() => {
-      setStep('connected')
-      setTimeout(() => {
-        try {
-          localStorage.setItem('nudge-user', JSON.stringify({
-            email: 'you@nyu.edu',
-            name: 'Student',
-            connectedAt: new Date().toISOString(),
-          }))
-        } catch (e) {
-          // localStorage might be unavailable; continue anyway
-        }
-        router.push('/')
-      }, 900)
-    }, 1400)
+export default async function LoginPage() {
+  // If they're already signed in, send them to the app
+  const session = await auth()
+  if (session?.user) {
+    redirect("/")
   }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-8 rounded-2xl border border-border bg-card p-10 shadow-lg">
-        {/* Logo / Brand */}
+        {/* Brand */}
         <div className="flex flex-col items-center space-y-3 text-center">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-600">
             <Sparkles className="h-7 w-7 text-white" />
@@ -42,11 +23,16 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* State: Sign-in */}
-        {step === 'signin' && (
-          <div className="space-y-4">
+        {/* Sign-in */}
+        <div className="space-y-4">
+          <form
+            action={async () => {
+              "use server"
+              await signIn("google", { redirectTo: "/" })
+            }}
+          >
             <button
-              onClick={handleSignIn}
+              type="submit"
               className="flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-white px-4 py-3 font-medium text-gray-800 transition hover:bg-gray-50"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24">
@@ -69,59 +55,11 @@ export default function LoginPage() {
               </svg>
               Sign in with Google
             </button>
-            <button
-              onClick={handleSignIn}
-              className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-medium text-white transition hover:bg-indigo-700"
-            >
-              Continue as Demo User
-            </button>
-            <p className="text-center text-xs text-muted-foreground">
-              We'll connect your calendar to find events that fit your free time.
-            </p>
-          </div>
-        )}
-
-        {/* State: Connecting */}
-        {step === 'connecting' && (
-          <div className="space-y-4 text-center">
-            <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600" />
-            <div>
-              <p className="font-medium">Connecting to Google Calendar</p>
-              <p className="text-sm text-muted-foreground">Reading your schedule for the week...</p>
-            </div>
-            <div className="space-y-2 rounded-lg bg-muted/50 p-4 text-left text-xs">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-500" />
-                Authenticating with Google
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-500" />
-                Fetching upcoming events
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-500" />
-                Analyzing free time blocks
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* State: Connected */}
-        {step === 'connected' && (
-          <div className="space-y-4 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
-              <Check className="h-6 w-6 text-green-600" />
-            </div>
-            <div>
-              <p className="font-medium">Calendar connected</p>
-              <p className="text-sm text-muted-foreground">Loading your dashboard...</p>
-            </div>
-            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-              <Calendar className="h-3.5 w-3.5" />
-              12 events found this week
-            </div>
-          </div>
-        )}
+          </form>
+          <p className="text-center text-xs text-muted-foreground">
+            We&apos;ll read your calendar so the agent can find events that fit your free time.
+          </p>
+        </div>
       </div>
     </div>
   )
