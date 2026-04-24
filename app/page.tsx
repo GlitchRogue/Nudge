@@ -1,5 +1,6 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
 import { useState, useEffect, useCallback } from 'react'
 import { TopNav } from '@/components/campus-agent/top-nav'
 import { SuggestionsPanel } from '@/components/campus-agent/suggestions-panel'
