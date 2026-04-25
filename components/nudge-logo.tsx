@@ -2,6 +2,7 @@
 
 import { useTheme } from 'next-themes'
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 
 interface NudgeLogoProps {
   variant?: 'full' | 'mark'
@@ -18,91 +19,50 @@ export function NudgeLogo({ variant = 'full', className = '' }: NudgeLogoProps) 
 
   // Prevent hydration mismatch - show light version by default
   const isDark = mounted && resolvedTheme === 'dark'
-  const brandColor = isDark ? '#2EAB8B' : '#0F6E56'
-  const arrowColor = '#E85D4C'
 
   if (variant === 'mark') {
-    // SVG mark only (the "n" with arrow)
+    // For mark, use a cropped portion of the logo or render as part of the full image
+    // Since we don't have separate mark images, we'll use the full image with object-fit
     return (
-      <svg
-        viewBox="0 0 48 40"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className={className}
-      >
-        {/* The stylized "n" */}
-        <path
-          d="M4 36V20C4 11.163 11.163 4 20 4V4C28.837 4 36 11.163 36 20V36"
-          stroke={brandColor}
-          strokeWidth="7"
-          strokeLinecap="round"
-          fill="none"
+      <div className={`relative overflow-hidden ${className}`}>
+        <Image
+          src={isDark ? '/logo-dark.png' : '/logo-light.png'}
+          alt="Nudge"
+          width={120}
+          height={48}
+          className="h-full w-auto object-contain object-left"
+          style={{ 
+            clipPath: 'inset(0 65% 0 0)',
+            transform: 'scale(1.5)',
+            transformOrigin: 'left center'
+          }}
+          priority
         />
-        {/* Arrow stem */}
-        <path
-          d="M28 16L36 4"
-          stroke={arrowColor}
-          strokeWidth="3"
-          strokeLinecap="round"
-        />
-        {/* Arrow head */}
-        <path
-          d="M32 3L37 4L36 9"
-          stroke={arrowColor}
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          fill="none"
-        />
-      </svg>
+      </div>
     )
   }
 
-  // Full logo with mark + wordmark as SVG
+  // Full logo with wordmark
   return (
-    <svg
-      viewBox="0 0 180 48"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-    >
-      {/* The stylized "n" mark */}
-      <path
-        d="M4 40V24C4 14.059 12.059 6 22 6V6C31.941 6 40 14.059 40 24V40"
-        stroke={brandColor}
-        strokeWidth="6"
-        strokeLinecap="round"
-        fill="none"
+    <>
+      {/* Light mode logo */}
+      <Image
+        src="/logo-light.png"
+        alt="Nudge"
+        width={160}
+        height={55}
+        className={`${className} ${isDark ? 'hidden' : 'block'}`}
+        priority
       />
-      {/* Arrow stem */}
-      <path
-        d="M30 18L40 6"
-        stroke={arrowColor}
-        strokeWidth="2.5"
-        strokeLinecap="round"
+      {/* Dark mode logo */}
+      <Image
+        src="/logo-dark.png"
+        alt="Nudge"
+        width={160}
+        height={55}
+        className={`${className} ${isDark ? 'block' : 'hidden'}`}
+        priority
       />
-      {/* Arrow head */}
-      <path
-        d="M35 5L41 6L40 12"
-        stroke={arrowColor}
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-      
-      {/* Wordmark "nudge" */}
-      <text
-        x="52"
-        y="34"
-        fill={brandColor}
-        fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-        fontSize="28"
-        fontWeight="600"
-        letterSpacing="-0.5"
-      >
-        nudge
-      </text>
-    </svg>
+    </>
   )
 }
