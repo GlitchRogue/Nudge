@@ -175,8 +175,11 @@ async def _call_gemini_chat(
                 "systemInstruction": {"parts": [{"text": system}]},
                 "contents": contents,
                 "generationConfig": {
-                    "maxOutputTokens": 400,
+                    "maxOutputTokens": 800,
                     "temperature": 0.6,
+                    # Disable extended thinking on 2.5-flash so the entire
+                    # token budget goes to the visible reply, not internal reasoning.
+                    "thinkingConfig": {"thinkingBudget": 0},
                 },
             },
         )
