@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { Settings, Moon, Sun, RotateCcw, User } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
+import { Settings, Moon, Sun, RotateCcw } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
 import {
@@ -11,15 +12,29 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
 interface TopNavProps {
   activeTab: 'suggestions' | 'group'
   onTabChange: (tab: 'suggestions' | 'group') => void
   onReset: () => void
+  userName?: string
+  userEmail?: string
 }
 
-export function TopNav({ activeTab, onTabChange, onReset }: TopNavProps) {
+export function TopNav({ activeTab, onTabChange, onReset, userName, userEmail }: TopNavProps) {
   const { theme, setTheme } = useTheme()
+  const searchParams = useSearchParams()
+  const isDemo = searchParams.get('demo') === '1'
+  
+  // Get initials from name
+  const getInitials = (name?: string) => {
+    if (!name) return 'U'
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+  }
+  
+  // Profile URL - preserves demo mode if active
+  const profileUrl = isDemo ? '/profile?demo=1' : '/profile'
 
   return (
     <header className="flex items-center justify-between border-b border-border bg-card px-6 py-3">
@@ -82,19 +97,27 @@ export function TopNav({ activeTab, onTabChange, onReset }: TopNavProps) {
               )}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/profile">
-                <User className="mr-2 h-4 w-4" />
-                Profile
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={onReset}>
               <RotateCcw className="mr-2 h-4 w-4" />
               Reset demo
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Profile - now visible in top bar */}
+        <Link href={profileUrl} className="flex items-center gap-2 rounded-full border border-border px-2 py-1 transition-colors hover:bg-muted">
+          <Avatar className="h-7 w-7">
+            <AvatarFallback className="bg-primary text-xs text-primary-foreground">
+              {getInitials(userName)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col">
+            <span className="text-sm font-medium leading-tight text-foreground">{userName || 'User'}</span>
+            {userEmail && (
+              <span className="text-xs leading-tight text-muted-foreground">{userEmail}</span>
+            )}
+          </div>
+        </Link>
       </div>
     </header>
   )

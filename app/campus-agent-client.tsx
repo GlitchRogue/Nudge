@@ -82,6 +82,8 @@ export default function CampusAgentClient({
         activeTab={activeTab}
         onTabChange={setActiveTab}
         onReset={handleReset}
+        userName={userName}
+        userEmail={userEmail}
       />
 
       {activeTab === 'suggestions' ? (

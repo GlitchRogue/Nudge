@@ -51,8 +51,10 @@ export interface EventSuggestion {
   }
 }
 
-// Get the start of the current week
-const weekStart = startOfWeek(new Date(), { weekStartsOn: 0 })
+// Use a fixed reference date to avoid hydration mismatches between server and client
+// This creates consistent dates regardless of when/where the code runs
+const FIXED_REFERENCE_DATE = new Date('2026-04-20T00:00:00')
+const weekStart = startOfWeek(FIXED_REFERENCE_DATE, { weekStartsOn: 0 })
 
 // Helper to create a date at a specific day and time this week
 function createDate(dayOffset: number, hour: number, minute: number = 0): Date {
