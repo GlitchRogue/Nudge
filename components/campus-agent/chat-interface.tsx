@@ -1,13 +1,16 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { useChat } from '@ai-sdk/react'
-import { DefaultChatTransport } from 'ai'
-import { ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { CampusAgentMessage } from '@/app/api/chat/route'
 
 const QUICKS = ["I'm free 1-2pm", "Show me free food", "Networking for CS", "I'm bored"]
+
+interface ChatMessage {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+}
 
 interface ChatInterfaceProps {
   onSendMessage?: (message: string) => void
@@ -15,11 +18,9 @@ interface ChatInterfaceProps {
 
 export function ChatInterface({ onSendMessage }: ChatInterfaceProps) {
   const [input, setInput] = useState('')
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [isStreaming, setIsStreaming] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-
-  const { messages, sendMessage, status } = useChat<CampusAgentMessage>({
-    transport: new DefaultChatTransport({ api: '/api/chat' }),
-  })
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -27,13 +28,52 @@ export function ChatInterface({ onSendMessage }: ChatInterfaceProps) {
 
   useEffect(() => {
     scrollToBottom()
-  }, [messages])
+  }, [messages, isStreaming])
 
-  const handleSubmit = (text: string) => {
-    if (!text.trim() || status !== 'ready') return
-    sendMessage({ text })
-    onSendMessage?.(text)
+  const handleSubmit = async (text: string) => {
+    if (!text.trim() || isStreaming) return
+
+    const userMsg: ChatMessage = {
+      id: `u-${Date.now()}`,
+      role: 'user',
+      content: text.trim(),
+    }
+    const next = [...messages, userMsg]
+    setMessages(next)
     setInput('')
+    setIsStreaming(true)
+    onSendMessage?.(text)
+
+    try {
+      const r = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          messages: next.map(m => ({ role: m.role, content: m.content })),
+        }),
+      })
+      const data = (await r.json()) as { reply?: string }
+      const replyText =
+        data.reply?.trim() ||
+        "I'm having trouble responding right now. Try rephrasing?"
+      setMessages(prev => [
+        ...prev,
+        { id: `a-${Date.now()}`, role: 'assistant', content: replyText },
+      ])
+    } catch (err) {
+      console.warn('[chat] fetch failed', err)
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `a-${Date.now()}`,
+          role: 'assistant',
+          content: "Network hiccup — try again in a moment.",
+        },
+      ])
+    } finally {
+      setIsStreaming(false)
+    }
   }
 
   const handleFormSubmit = (e: React.FormEvent) => {
@@ -41,24 +81,30 @@ export function ChatInterface({ onSendMessage }: ChatInterfaceProps) {
     handleSubmit(input)
   }
 
-  const isStreaming = status === 'streaming' || status === 'submitted'
-
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* Section header */}
       <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.08em] text-app-muted">
         ASK ANYTHING
       </p>
 
-      {/* Messages */}
       <div className="mb-3.5 flex min-h-0 flex-1 flex-col gap-2 overflow-auto">
         {messages.length === 0 ? (
           <div className="max-w-[85%] self-start rounded-2xl rounded-bl-md border border-app-border bg-app-card px-3 py-2.5 text-[13px] leading-snug text-app-text">
-            Hi! I&apos;m Nudge. Tell me when you&apos;re free and I&apos;ll match it to your interests.
+            Hi, I&apos;m Nudge. Tell me when you&apos;re free and I&apos;ll match it to your interests.
           </div>
         ) : (
-          messages.map((message) => (
-            <MessageBubble key={message.id} message={message} />
+          messages.map(m => (
+            <div
+              key={m.id}
+              className={cn(
+                'max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2.5 text-[13px] leading-snug',
+                m.role === 'assistant'
+                  ? 'self-start rounded-bl-md border border-app-border bg-app-card text-app-text'
+                  : 'self-end rounded-br-md bg-brand text-white',
+              )}
+            >
+              {m.content}
+            </div>
           ))
         )}
         {isStreaming && (
@@ -70,7 +116,6 @@ export function ChatInterface({ onSendMessage }: ChatInterfaceProps) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Quick replies */}
       <div className="mb-3 flex flex-wrap gap-1.5">
         {QUICKS.map(q => (
           <button
@@ -85,13 +130,14 @@ export function ChatInterface({ onSendMessage }: ChatInterfaceProps) {
         ))}
       </div>
 
-      {/* Input */}
-      <form onSubmit={handleFormSubmit} className="flex items-center gap-2 rounded-full border border-app-border bg-app-card py-1.5 pl-3.5 pr-1.5">
+      <form
+        onSubmit={handleFormSubmit}
+        className="flex items-center gap-2 rounded-full border border-app-border bg-app-card py-1.5 pl-3.5 pr-1.5"
+      >
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSubmit(input)}
           placeholder="Type a message..."
           className="h-8 flex-1 bg-transparent text-[13px] text-app-text outline-none placeholder:text-app-subtle"
           disabled={isStreaming}
@@ -104,93 +150,6 @@ export function ChatInterface({ onSendMessage }: ChatInterfaceProps) {
           Send
         </button>
       </form>
-    </div>
-  )
-}
-
-function MessageBubble({ message }: { message: CampusAgentMessage }) {
-  const isAssistant = message.role === 'assistant'
-
-  return (
-    <>
-      {message.parts.map((part, index) => {
-        if (part.type === 'text') {
-          return (
-            <div
-              key={index}
-              className={cn(
-                'max-w-[85%] rounded-2xl px-3 py-2.5 text-[13px] leading-snug',
-                isAssistant 
-                  ? 'self-start rounded-bl-md border border-app-border bg-app-card text-app-text' 
-                  : 'self-end rounded-br-md bg-brand text-white'
-              )}
-            >
-              {part.text}
-            </div>
-          )
-        }
-
-        // Tool calls
-        if (part.type.startsWith('tool-')) {
-          return <ToolCallDisplay key={index} part={part} />
-        }
-
-        return null
-      })}
-    </>
-  )
-}
-
-function ToolCallDisplay({ part }: { part: CampusAgentMessage['parts'][number] }) {
-  const [isExpanded, setIsExpanded] = useState(false)
-
-  const toolName = part.type.replace('tool-', '')
-  const state = 'state' in part ? part.state : 'output-available'
-  const isLoading = state === 'input-streaming' || state === 'input-available'
-
-  return (
-    <div className="w-full self-start rounded-xl border border-app-border bg-app-surface text-[12px]">
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="flex w-full items-center justify-between px-3 py-2 text-left"
-      >
-        <div className="flex items-center gap-2">
-          {isLoading ? (
-            <Loader2 className="h-3 w-3 animate-spin text-brand" />
-          ) : (
-            <div className="h-2 w-2 rounded-full bg-brand" />
-          )}
-          <span className="font-medium text-app-muted">
-            {toolName}
-          </span>
-        </div>
-        {isExpanded ? (
-          <ChevronUp className="h-3.5 w-3.5 text-app-muted" />
-        ) : (
-          <ChevronDown className="h-3.5 w-3.5 text-app-muted" />
-        )}
-      </button>
-
-      {isExpanded && (
-        <div className="border-t border-app-border px-3 py-2">
-          {'input' in part && part.input && (
-            <div className="mb-2">
-              <span className="text-[10px] font-medium text-app-muted">Input:</span>
-              <pre className="mt-1 overflow-auto rounded-lg bg-app-card p-2 text-[10px]">
-                {JSON.stringify(part.input, null, 2)}
-              </pre>
-            </div>
-          )}
-          {'output' in part && part.output && (
-            <div>
-              <span className="text-[10px] font-medium text-app-muted">Output:</span>
-              <pre className="mt-1 overflow-auto rounded-lg bg-app-card p-2 text-[10px]">
-                {JSON.stringify(part.output, null, 2)}
-              </pre>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   )
 }

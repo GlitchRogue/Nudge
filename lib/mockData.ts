@@ -38,6 +38,7 @@ export interface AvailableEvent {
   tags: string[]
   capacity?: number
   spotsLeft?: number
+  url?: string
 }
 
 export interface EventSuggestion {

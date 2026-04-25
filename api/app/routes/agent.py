@@ -6,10 +6,16 @@ POST /agent/approve -> user clicks Approve -> we record an 'approved' Action,
                        which the actions route then commits to Calendar if linked.
 """
 import asyncio
+import os
 from datetime import timedelta
+from typing import List, Optional
+
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from ..config import settings
 from ..db import get_db
 from ..models import Event, User, CalendarEntry, Action
 from ..schemas import AgentDraftOut, EventOut, ActionIn
@@ -68,3 +74,126 @@ def approve(
 ):
     body.action_type = "approved"
     return record_action(body, user, db)
+
+
+# -------------------------------------------------------------------
+# Conversational chat endpoint — proxied by the Next.js /api/chat route
+# -------------------------------------------------------------------
+class ChatMessage(BaseModel):
+    role: str  # 'user' | 'assistant'
+    content: str
+
+
+class ChatRequest(BaseModel):
+    messages: List[ChatMessage]
+
+
+class ChatResponse(BaseModel):
+    reply: str
+    suggested_event_ids: List[str] = []
+
+
+CHAT_SYSTEM = """You are Nudge, an AI scheduling agent for college students in NYC.
+You help students find events that fit their interests + free time.
+
+Style:
+- Concise, direct, dry. Never sycophantic. Never use exclamation points.
+- 1-3 sentences max unless the user asks for detail.
+- When recommending events, name the event title in quotes and explain why in <=15 words.
+- If the user asks something off-topic, redirect briefly back to events/scheduling.
+"""
+
+
+def _format_event_context(events: list[Event], user: User) -> str:
+    """Build a short context string of upcoming events for the LLM."""
+    lines = []
+    for ev in events[:12]:
+        tags = ", ".join(ev.tags or [])
+        when = ev.start_time.strftime("%a %b %d %I:%M%p") if ev.start_time else "?"
+        cost = "free" if (ev.cost or 0) == 0 else f"${ev.cost:.0f}"
+        lines.append(
+            f"- [{ev.id}] \"{ev.title}\" — {when} @ {ev.location_text or '?'} — {cost} — tags: {tags}"
+        )
+    interests = ", ".join(user.interests or []) or "unknown"
+    return (
+        f"Student interests: {interests}\n\n"
+        f"Upcoming events available:\n" + "\n".join(lines)
+    )
+
+
+async def _call_anthropic_chat(
+    system: str, messages: List[ChatMessage]
+) -> str:
+    key = settings.anthropic_api_key or os.getenv("ANTHROPIC_API_KEY")
+    if not key:
+        return ""
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        resp = await client.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": key,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            },
+            json={
+                "model": "claude-haiku-4-5-20251001",
+                "max_tokens": 400,
+                "system": system,
+                "messages": [
+                    {"role": m.role, "content": m.content} for m in messages
+                ],
+            },
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return data["content"][0]["text"].strip()
+
+
+@router.post("/chat", response_model=ChatResponse)
+async def chat(
+    body: ChatRequest,
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    """Conversational endpoint. Pulls upcoming events into context so Claude
+    can recommend specific events by title. Returns a single reply string.
+    """
+    if not body.messages:
+        raise HTTPException(400, "messages required")
+
+    events = db.query(Event).order_by(Event.start_time.asc()).all()
+    calendar = db.query(CalendarEntry).filter(CalendarEntry.user_id == user.id).all()
+    actions = db.query(Action).filter(Action.user_id == user.id).all()
+    ranked = rank_events(events, user, calendar, actions)
+    top_events = [r["event"] for r in ranked[:12] if not r["conflict"]]
+
+    context = _format_event_context(top_events, user)
+    system = CHAT_SYSTEM + "\n\n" + context
+
+    try:
+        reply = await _call_anthropic_chat(system, body.messages)
+    except Exception as e:
+        print(f"[chat] anthropic call failed: {e}")
+        reply = ""
+
+    if not reply:
+        # Fallback: deterministic top-pick recommendation
+        if top_events:
+            ev = top_events[0]
+            when = ev.start_time.strftime("%a %b %d %I:%M%p")
+            reply = (
+                f"Top pick right now: \"{ev.title}\" on {when} at "
+                f"{ev.location_text or 'TBD'}. Matches your interests."
+            )
+        else:
+            reply = "No upcoming events match your filters yet. Try widening your interests in the profile."
+
+    # Surface up to 3 event IDs the assistant likely referenced (by title match)
+    referenced = []
+    for ev in top_events:
+        if ev.title.lower() in reply.lower():
+            referenced.append(ev.id)
+        if len(referenced) >= 3:
+            break
+
+    return ChatResponse(reply=reply, suggested_event_ids=referenced)

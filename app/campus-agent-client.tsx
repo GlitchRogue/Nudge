@@ -108,14 +108,23 @@ export default function CampusAgentClient({
 
   const handleAddToCalendar = useCallback(
     (eventId: string) => {
-      setAddedEventIds((prev) => new Set([...prev, eventId]))
-      if (backendEnabled) {
-        apiActions
-          .record(eventId, 'add_to_calendar')
-          .catch((err) =>
-            console.warn('[Nudge] add_to_calendar failed:', err),
-          )
-      }
+      setAddedEventIds((prev) => {
+        const next = new Set(prev)
+        const wasAdded = next.has(eventId)
+        if (wasAdded) {
+          next.delete(eventId)
+        } else {
+          next.add(eventId)
+        }
+        if (backendEnabled) {
+          apiActions
+            .record(eventId, wasAdded ? 'dismiss' : 'add_to_calendar')
+            .catch((err) =>
+              console.warn('[Nudge] action failed:', err),
+            )
+        }
+        return next
+      })
     },
     [backendEnabled],
   )

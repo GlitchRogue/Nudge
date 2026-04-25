@@ -21,6 +21,7 @@ export function rankedToSuggestion(r: RankedEvent): EventSuggestion {
     source: mapSource(r.event.source),
     category: r.event.tags[0] ?? "Event",
     tags: r.event.tags,
+    url: r.event.url,
   }
   const reasoning: string[] = [r.reason]
   // Surface signal breakdown as bullets so the demo can show "why"

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ChevronDown, ChevronUp, AlertTriangle, Check } from 'lucide-react'
+import { ChevronDown, ChevronUp, AlertTriangle, Check, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { EventSuggestion, sourceBadgeColors } from '@/lib/mockData'
 
@@ -83,7 +83,19 @@ export function EventCard({
         
         {/* Title and description */}
         <h3 className="mb-1 mt-2 text-[15.5px] font-medium leading-snug text-app-text">
-          {event.title}
+          {event.url ? (
+            <a
+              href={event.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 hover:text-brand hover:underline"
+            >
+              {event.title}
+              <ExternalLink className="h-3.5 w-3.5 flex-shrink-0 text-app-subtle" />
+            </a>
+          ) : (
+            event.title
+          )}
         </h3>
         <p className="mb-2.5 text-[12.5px] leading-snug text-app-muted">
           {event.description}
@@ -162,19 +174,18 @@ export function EventCard({
           </ul>
         )}
 
-        {/* Action button */}
+        {/* Action button — toggles add/remove */}
         <button
           type="button"
-          onClick={() => isAdded ? onTellMeMore(event.id) : onAddToCalendar(event.id)}
-          disabled={isAdded}
+          onClick={() => onAddToCalendar(event.id)}
           className={cn(
             'w-full rounded-lg border py-2 text-[12px] font-medium transition',
             isAdded
-              ? 'border-brand bg-brand-bg text-brand'
-              : 'border-app-border-strong text-app-subtle hover:bg-app-surface'
+              ? 'border-brand bg-brand-bg text-brand hover:bg-app-surface hover:text-app-muted'
+              : 'border-app-border-strong text-app-subtle hover:bg-app-surface',
           )}
         >
-          {isAdded ? 'Added to Calendar' : 'Add to Calendar'}
+          {isAdded ? '✓ Added — click to remove' : 'Add to Calendar'}
         </button>
       </div>
     </article>
