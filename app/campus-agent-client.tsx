@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Calendar, MessageSquare, Sparkles } from 'lucide-react'
-import { TopNav } from '@/components/campus-agent/top-nav'
+import { TopNav, type LayoutMode } from '@/components/campus-agent/top-nav'
 import { SuggestionsPanel } from '@/components/campus-agent/suggestions-panel'
 import { ChatInterface } from '@/components/campus-agent/chat-interface'
 import { WeekCalendar } from '@/components/campus-agent/week-calendar'
@@ -49,6 +49,35 @@ export default function CampusAgentClient({
     () => Object.fromEntries(suggestions.map((s) => [s.event.id, s.event.title])),
     [suggestions],
   )
+
+  // Layout mode: auto (responsive), mobile (force mobile), desktop (force desktop)
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>('auto')
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('nudge.layoutMode') as LayoutMode | null
+      if (saved === 'auto' || saved === 'mobile' || saved === 'desktop') {
+        setLayoutMode(saved)
+      }
+    } catch {}
+  }, [])
+  const handleLayoutModeChange = useCallback((m: LayoutMode) => {
+    setLayoutMode(m)
+    try { localStorage.setItem('nudge.layoutMode', m) } catch {}
+  }, [])
+
+  // Compute Tailwind classes for desktop + mobile layout containers based on mode
+  const desktopLayoutClass =
+    layoutMode === 'desktop'
+      ? 'flex flex-1 overflow-hidden'
+      : layoutMode === 'mobile'
+        ? 'hidden'
+        : 'hidden flex-1 overflow-hidden lg:flex'
+  const mobileLayoutClass =
+    layoutMode === 'mobile'
+      ? 'flex flex-1 flex-col overflow-hidden'
+      : layoutMode === 'desktop'
+        ? 'hidden'
+        : 'flex flex-1 flex-col overflow-hidden lg:hidden'
 
   // On mount, hit the backend for real ranked events. The backend session
   // cookie is acquired by signing in (real Google or /auth/demo) — if there's
@@ -172,12 +201,14 @@ export default function CampusAgentClient({
           onReset={handleReset}
           userName={userName}
           userEmail={userEmail}
+          layoutMode={layoutMode}
+          onLayoutModeChange={handleLayoutModeChange}
         />
 
         {activeTab === 'suggestions' ? (
           <>
             {/* Desktop Layout */}
-            <div className="hidden flex-1 overflow-hidden lg:flex">
+            <div className={desktopLayoutClass}>
               {/* Left Panel - 60% */}
               <div className="flex w-[60%] flex-col overflow-hidden border-r border-border">
                 {/* Suggestions - scrollable section */}
@@ -218,7 +249,7 @@ export default function CampusAgentClient({
             </div>
 
             {/* Mobile Layout with Tab Navigation */}
-            <div className="flex flex-1 flex-col overflow-hidden lg:hidden">
+            <div className={mobileLayoutClass}>
               {/* Mobile Tab Content */}
               <div className="min-h-0 flex-1 overflow-hidden">
                 {mobileTab === 'calendar' && (

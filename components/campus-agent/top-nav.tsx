@@ -3,6 +3,9 @@
 import { useSearchParams } from 'next/navigation'
 import { useTheme } from 'next-themes'
 import { useEffect, useState } from 'react'
+import { Smartphone, Monitor } from 'lucide-react'
+
+export type LayoutMode = 'auto' | 'mobile' | 'desktop'
 
 interface TopNavProps {
   activeTab: 'suggestions' | 'group'
@@ -10,9 +13,11 @@ interface TopNavProps {
   onReset: () => void
   userName?: string
   userEmail?: string
+  layoutMode?: LayoutMode
+  onLayoutModeChange?: (mode: LayoutMode) => void
 }
 
-export function TopNav({ activeTab, onTabChange, onReset, userName, userEmail }: TopNavProps) {
+export function TopNav({ activeTab, onTabChange, onReset, userName, userEmail, layoutMode = 'auto', onLayoutModeChange }: TopNavProps) {
   const { resolvedTheme, setTheme } = useTheme()
   const searchParams = useSearchParams()
   const isDemo = searchParams.get('demo') === '1'
@@ -35,16 +40,54 @@ export function TopNav({ activeTab, onTabChange, onReset, userName, userEmail }:
         </h1>
       </div>
       
-      {/* Dark mode toggle */}
-      <button
-        type="button"
-        onClick={() => setTheme(isDark ? 'light' : 'dark')}
-        aria-label="Toggle dark mode"
-        className="relative mt-1 h-[27px] w-[46px] flex-shrink-0"
-      >
-        <span className={`absolute inset-0 rounded-full transition-colors ${isDark ? 'bg-brand' : 'bg-app-border-strong'}`} />
-        <span className={`absolute top-[2px] h-[23px] w-[23px] rounded-full border-[0.5px] border-black/10 bg-white transition-all ${isDark ? 'left-[21px]' : 'left-[2px]'}`} />
-      </button>
+      <div className="mt-1 flex items-center gap-2">
+        {/* Layout mode toggle: auto / mobile / desktop */}
+        {onLayoutModeChange && (
+          <div className="inline-flex h-[27px] items-center rounded-full border border-app-border-strong bg-app-card p-0.5">
+            <button
+              type="button"
+              onClick={() => onLayoutModeChange('auto')}
+              className={`rounded-full px-2 py-0.5 text-[10px] font-medium transition ${
+                layoutMode === 'auto' ? 'bg-brand text-white' : 'text-app-muted hover:text-app-text'
+              }`}
+              aria-label="Auto layout"
+            >
+              Auto
+            </button>
+            <button
+              type="button"
+              onClick={() => onLayoutModeChange('mobile')}
+              className={`flex h-[21px] w-[24px] items-center justify-center rounded-full transition ${
+                layoutMode === 'mobile' ? 'bg-brand text-white' : 'text-app-muted hover:text-app-text'
+              }`}
+              aria-label="Force mobile layout"
+            >
+              <Smartphone className="h-3 w-3" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onLayoutModeChange('desktop')}
+              className={`flex h-[21px] w-[24px] items-center justify-center rounded-full transition ${
+                layoutMode === 'desktop' ? 'bg-brand text-white' : 'text-app-muted hover:text-app-text'
+              }`}
+              aria-label="Force desktop layout"
+            >
+              <Monitor className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+
+        {/* Dark mode toggle */}
+        <button
+          type="button"
+          onClick={() => setTheme(isDark ? 'light' : 'dark')}
+          aria-label="Toggle dark mode"
+          className="relative h-[27px] w-[46px] flex-shrink-0"
+        >
+          <span className={`absolute inset-0 rounded-full transition-colors ${isDark ? 'bg-brand' : 'bg-app-border-strong'}`} />
+          <span className={`absolute top-[2px] h-[23px] w-[23px] rounded-full border-[0.5px] border-black/10 bg-white transition-all ${isDark ? 'left-[21px]' : 'left-[2px]'}`} />
+        </button>
+      </div>
     </header>
   )
 }
