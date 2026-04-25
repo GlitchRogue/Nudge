@@ -13,7 +13,8 @@ interface WeekCalendarProps {
   onAddToCalendar?: (eventId: string) => void
 }
 
-const HOURS = Array.from({ length: 14 }, (_, i) => i + 7) // 7 AM to 8 PM
+const HOURS = Array.from({ length: 18 }, (_, i) => i + 6) // 6 AM to 11 PM (18 hours)
+const GRID_HEIGHT = 18 * 48 // px
 const DAYS = Array.from({ length: 7 }, (_, i) => i) // Sun to Sat
 
 // Use a fixed reference date for SSR to avoid hydration mismatches
@@ -34,7 +35,7 @@ export function WeekCalendar({ events, suggestions, addedEventIds, onAddToCalend
   const getEventStyle = (startTime: Date, endTime: Date) => {
     const startHour = startTime.getHours() + startTime.getMinutes() / 60
     const endHour = endTime.getHours() + endTime.getMinutes() / 60
-    const top = (startHour - 7) * 48 // 48px per hour
+    const top = (startHour - 6) * 48 // 48px per hour, grid starts at 6 AM
     const height = (endHour - startHour) * 48
     return { top: `${top}px`, height: `${Math.max(height, 24)}px` }
   }
@@ -133,9 +134,9 @@ export function WeekCalendar({ events, suggestions, addedEventIds, onAddToCalend
       </div>
 
       {/* Time Grid */}
-      <div className="flex flex-1 overflow-auto">
+      <div className="flex flex-1 overflow-y-auto">
         {/* Time labels */}
-        <div className="w-14 flex-shrink-0">
+        <div className="w-14 flex-shrink-0" style={{ height: `${GRID_HEIGHT}px` }}>
           {HOURS.map((hour) => (
             <div key={hour} className="relative h-12">
               <span className="absolute -top-2 right-2 text-xs text-muted-foreground">
@@ -146,7 +147,7 @@ export function WeekCalendar({ events, suggestions, addedEventIds, onAddToCalend
         </div>
 
         {/* Day columns */}
-        <div className="flex flex-1">
+        <div className="flex flex-1" style={{ height: `${GRID_HEIGHT}px` }}>
           {DAYS.map((dayOffset) => {
             const date = addDays(weekStart, dayOffset)
             const dayEvents = allEvents.filter(e => isSameDay(e.startTime, date))
@@ -161,6 +162,7 @@ export function WeekCalendar({ events, suggestions, addedEventIds, onAddToCalend
                   'relative flex-1 border-l border-border first:border-l-0',
                   isClient && isToday(date) && 'bg-primary/5'
                 )}
+                style={{ height: `${GRID_HEIGHT}px` }}
               >
                 {/* Hour lines */}
                 {HOURS.map((hour) => (
