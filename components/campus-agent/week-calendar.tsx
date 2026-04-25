@@ -57,26 +57,11 @@ export function WeekCalendar({ events, suggestions, addedEventIds, onAddToCalend
     }
   }
 
-  // Combine regular events with added suggestions
-  const allEvents = useMemo(() => {
-    const suggestedEvents: CalendarEvent[] = suggestions
-      .filter(s => addedEventIds.has(s.event.id))
-      .map(s => ({
-        id: s.event.id,
-        title: s.event.title,
-        location: s.event.location,
-        startTime: s.event.startTime,
-        endTime: s.event.endTime,
-        type: 'suggested' as const,
-        priority: 'medium' as const,
-      }))
-    return [...events, ...suggestedEvents]
-  }, [events, suggestions, addedEventIds])
+  // Real calendar events only (suggestions handled separately so we can keep their url + toggle)
+  const allEvents = useMemo(() => events, [events])
 
-  // Also show non-added suggestions as dashed outlines
-  const pendingSuggestions = useMemo(() => {
-    return suggestions.filter(s => !addedEventIds.has(s.event.id))
-  }, [suggestions, addedEventIds])
+  // Show ALL suggestions as overlays — added ones get solid styling, pending stay dashed
+  const pendingSuggestions = useMemo(() => suggestions, [suggestions])
 
   const weekEnd = addDays(weekStart, 6)
   const weekRangeLabel =
@@ -203,25 +188,38 @@ export function WeekCalendar({ events, suggestions, addedEventIds, onAddToCalend
                   )
                 })}
 
-                {/* Pending suggestions (dashed) */}
+                {/* Suggestions — dashed when pending, solid when added */}
                 {daySuggestions.map((suggestion) => {
                   const style = getEventStyle(suggestion.event.startTime, suggestion.event.endTime)
+                  const isAdded = addedEventIds.has(suggestion.event.id)
                   return (
                     <div
                       key={suggestion.event.id}
-                      className="group absolute left-0.5 right-0.5 overflow-hidden rounded border-2 border-dashed border-success/60 bg-success/5 px-1 py-0.5 text-xs"
+                      className={cn(
+                        'group absolute left-0.5 right-0.5 overflow-hidden rounded px-1 py-0.5 text-xs',
+                        isAdded
+                          ? 'border border-success bg-success/20'
+                          : 'border-2 border-dashed border-success/60 bg-success/5'
+                      )}
                       style={style}
                     >
-                      <div className="truncate font-medium text-success">{suggestion.event.title}</div>
-                      <div className="truncate text-success/70">{suggestion.event.location}</div>
+                      <div className={cn('truncate font-medium', isAdded ? 'text-success-foreground' : 'text-success')}>
+                        {suggestion.event.title}
+                      </div>
+                      <div className={cn('truncate', isAdded ? 'text-success-foreground/80' : 'text-success/70')}>
+                        {suggestion.event.location}
+                      </div>
                       {onAddToCalendar && (
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); onAddToCalendar(suggestion.event.id) }}
-                          className="absolute right-0.5 top-0.5 rounded bg-success px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white shadow-sm transition hover:opacity-90 active:scale-95"
-                          aria-label="Add to calendar"
+                          className={cn(
+                            'absolute right-0.5 top-0.5 rounded px-1.5 py-0.5 text-[10px] font-semibold leading-none shadow-sm transition hover:opacity-90 active:scale-95',
+                            isAdded ? 'bg-white text-success border border-success' : 'bg-success text-white'
+                          )}
+                          aria-label={isAdded ? 'Remove from calendar' : 'Add to calendar'}
                         >
-                          + Add
+                          {isAdded ? '✓ Added' : '+ Add'}
                         </button>
                       )}
                       {suggestion.event.url && (
@@ -230,7 +228,7 @@ export function WeekCalendar({ events, suggestions, addedEventIds, onAddToCalend
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
-                          className="absolute bottom-0.5 right-0.5 rounded bg-white/80 px-1 py-0.5 text-[9px] font-medium text-success underline-offset-2 hover:underline"
+                          className="absolute bottom-0.5 right-0.5 rounded bg-white/90 px-1 py-0.5 text-[9px] font-medium text-success underline-offset-2 hover:underline"
                         >
                           link ↗
                         </a>

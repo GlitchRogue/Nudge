@@ -41,21 +41,8 @@ export function MobileCalendar({ events, suggestions, addedEventIds, onAddToCale
     return addWeeks(base, weekOffset)
   }, [isClient, weekOffset])
 
-  // Combine events with added suggestions
-  const allEvents = useMemo(() => {
-    const suggestedEvents: CalendarEvent[] = suggestions
-      .filter(s => addedEventIds.has(s.event.id))
-      .map(s => ({
-        id: s.event.id,
-        title: s.event.title,
-        location: s.event.location,
-        startTime: s.event.startTime,
-        endTime: s.event.endTime,
-        type: 'suggested' as const,
-        priority: 'medium' as const,
-      }))
-    return [...events, ...suggestedEvents]
-  }, [events, suggestions, addedEventIds])
+  // Real events only — suggestions kept separate so we keep url + toggle
+  const allEvents = useMemo(() => events, [events])
 
   // Get events for selected day
   const selectedDate = addDays(weekStart, selectedDay)
@@ -63,15 +50,16 @@ export function MobileCalendar({ events, suggestions, addedEventIds, onAddToCale
     return allEvents.filter(e => isSameDay(e.startTime, selectedDate))
   }, [allEvents, selectedDate])
 
+  // ALL suggestions for the day (added + pending)
   const pendingSuggestions = useMemo(() => {
-    return suggestions.filter(s => !addedEventIds.has(s.event.id) && isSameDay(s.event.startTime, selectedDate))
-  }, [suggestions, addedEventIds, selectedDate])
+    return suggestions.filter(s => isSameDay(s.event.startTime, selectedDate))
+  }, [suggestions, selectedDate])
 
   // Check if a day has events
   const getDayHasEvents = (dayIndex: number) => {
     const date = addDays(weekStart, dayIndex)
     return allEvents.some(e => isSameDay(e.startTime, date)) ||
-           suggestions.some(s => !addedEventIds.has(s.event.id) && isSameDay(s.event.startTime, date))
+           suggestions.some(s => isSameDay(s.event.startTime, date))
   }
 
   const weekEnd = addDays(weekStart, 6)
@@ -173,6 +161,7 @@ export function MobileCalendar({ events, suggestions, addedEventIds, onAddToCale
               <SuggestionListItem 
                 key={s.event.id} 
                 suggestion={s}
+                isAdded={addedEventIds.has(s.event.id)}
                 onAdd={onAddToCalendar}
               />
             ))}
@@ -224,11 +213,16 @@ function EventListItem({ event }: { event: CalendarEvent }) {
   )
 }
 
-function SuggestionListItem({ suggestion, onAdd }: { suggestion: EventSuggestion; onAdd?: (id: string) => void }) {
+function SuggestionListItem({ suggestion, isAdded, onAdd }: { suggestion: EventSuggestion; isAdded: boolean; onAdd?: (id: string) => void }) {
   const { event, matchScore } = suggestion
 
   return (
-    <article className="overflow-hidden rounded-2xl border-2 border-dashed border-brand/50 bg-brand-bg">
+    <article className={cn(
+      'overflow-hidden rounded-2xl',
+      isAdded
+        ? 'border-2 border-brand bg-brand/10 ring-2 ring-brand/30'
+        : 'border-2 border-dashed border-brand/50 bg-brand-bg'
+    )}>
       <div className="px-4 pb-3 pt-3">
         <div className="flex items-center justify-between">
           <span className="inline-flex items-center gap-1.5 text-[11px] font-medium tracking-[0.06em] text-brand">
@@ -260,9 +254,14 @@ function SuggestionListItem({ suggestion, onAdd }: { suggestion: EventSuggestion
           <button
             type="button"
             onClick={() => onAdd?.(event.id)}
-            className="shrink-0 rounded-lg bg-brand px-3 py-1.5 text-[11px] font-medium text-white transition hover:opacity-90 active:scale-95"
+            className={cn(
+              'shrink-0 rounded-lg px-3 py-1.5 text-[11px] font-medium transition hover:opacity-90 active:scale-95',
+              isAdded
+                ? 'border border-brand bg-white text-brand'
+                : 'bg-brand text-white'
+            )}
           >
-            Add
+            {isAdded ? '✓ Added' : 'Add'}
           </button>
         </div>
       </div>
