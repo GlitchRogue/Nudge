@@ -10,6 +10,8 @@ import { GroupTab } from '@/components/campus-agent/group-tab'
 import { generateSuggestions } from '@/lib/agent'
 import { cn } from '@/lib/utils'
 import type { CalendarEvent, EventSuggestion } from '@/lib/mockData'
+import { apiEvents, apiActions, apiAuth } from '@/lib/api-client'
+import { rankedToSuggestion } from '@/lib/event-search'
 
 type MobileTab = 'calendar' | 'chat' | 'events'
 
@@ -19,6 +21,8 @@ interface CampusAgentClientProps {
   userName?: string
   userEmail?: string
   profileInterests?: string[]
+  /** When true, the client will hit the FastAPI backend for ranked events */
+  backendEnabled?: boolean
 }
 
 export default function CampusAgentClient({
@@ -27,6 +31,7 @@ export default function CampusAgentClient({
   userName,
   userEmail,
   profileInterests,
+  backendEnabled,
 }: CampusAgentClientProps) {
   const [activeTab, setActiveTab] = useState<'suggestions' | 'group'>('suggestions')
   const [mobileTab, setMobileTab] = useState<MobileTab>('chat') // Default to chat
@@ -38,37 +43,81 @@ export default function CampusAgentClient({
   )
   const [addedEventIds, setAddedEventIds] = useState<Set<string>>(new Set())
 
-  // If we got server-rendered suggestions, just clear the loading flag.
-  // Otherwise fall back to the local mock generator (legacy path).
+  // On mount, hit the backend for real ranked events. The backend session
+  // cookie is acquired by signing in (real Google or /auth/demo) — if there's
+  // no session yet, we silently auto-call /auth/demo so the demo always works.
   useEffect(() => {
-    if (initialSuggestions && initialSuggestions.length > 0) {
+    let cancelled = false
+    if (!backendEnabled) {
+      // No backend integration; just clear loading.
       setIsLoading(false)
       return
     }
-    const timer = setTimeout(() => {
-      setSuggestions(generateSuggestions())
-      setIsLoading(false)
-    }, 1200)
-    return () => clearTimeout(timer)
-  }, [initialSuggestions])
 
-  const handleReset = useCallback(() => {
+    async function loadFromBackend() {
+      try {
+        // Make sure we have a backend session. If /user/me 401s, fall back to demo.
+        try {
+          await apiAuth.me()
+        } catch {
+          await apiAuth.demo()
+        }
+        const ranked = await apiEvents.list()
+        if (cancelled) return
+        const mapped = ranked.map(rankedToSuggestion)
+        if (mapped.length > 0) {
+          setSuggestions(mapped)
+        }
+      } catch (err) {
+        console.warn('[Nudge] Backend fetch failed, keeping fallback:', err)
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
+    }
+
+    loadFromBackend()
+    return () => {
+      cancelled = true
+    }
+  }, [backendEnabled])
+
+  const handleReset = useCallback(async () => {
     setIsLoading(true)
     setAddedEventIds(new Set())
     setSuggestions([])
     setActiveTab('suggestions')
 
+    if (backendEnabled) {
+      try {
+        const ranked = await apiEvents.list()
+        setSuggestions(ranked.map(rankedToSuggestion))
+      } catch {
+        setSuggestions(initialSuggestions ?? generateSuggestions())
+      } finally {
+        setIsLoading(false)
+      }
+      return
+    }
+
     setTimeout(() => {
-      // On reset, fall back to the local generator. (Real-data refresh
-      // would re-call the server action — wire that in when ready.)
       setSuggestions(initialSuggestions ?? generateSuggestions())
       setIsLoading(false)
-    }, 1200)
-  }, [initialSuggestions])
+    }, 600)
+  }, [initialSuggestions, backendEnabled])
 
-  const handleAddToCalendar = useCallback((eventId: string) => {
-    setAddedEventIds((prev) => new Set([...prev, eventId]))
-  }, [])
+  const handleAddToCalendar = useCallback(
+    (eventId: string) => {
+      setAddedEventIds((prev) => new Set([...prev, eventId]))
+      if (backendEnabled) {
+        apiActions
+          .record(eventId, 'add_to_calendar')
+          .catch((err) =>
+            console.warn('[Nudge] add_to_calendar failed:', err),
+          )
+      }
+    },
+    [backendEnabled],
+  )
 
   const handleTellMeMore = useCallback((eventId: string) => {
     console.log('[Nudge] Tell me more about event:', eventId)
@@ -77,8 +126,13 @@ export default function CampusAgentClient({
   const handleApproveRearrangement = useCallback(
     (eventId: string) => {
       handleAddToCalendar(eventId)
+      if (backendEnabled) {
+        apiActions
+          .record(eventId, 'approved')
+          .catch((err) => console.warn('[Nudge] approve failed:', err))
+      }
     },
-    [handleAddToCalendar],
+    [handleAddToCalendar, backendEnabled],
   )
 
   return (

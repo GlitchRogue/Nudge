@@ -12,6 +12,59 @@ import { z } from 'zod'
 import { availableEvents, calendarEvents, userProfile } from '@/lib/mockData'
 import { format } from 'date-fns'
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
+
+/**
+ * Try to fetch live ranked events from the FastAPI backend, fall back to
+ * the local mock dataset if the backend is unreachable. Used by the chat's
+ * searchEvents tool so the chatbot can recommend real Luma/Eventbrite events.
+ */
+async function fetchLiveEvents(): Promise<
+  Array<{ id: string; title: string; description: string; location: string; startTime: Date; tags: string[]; category: string; source: string }>
+> {
+  try {
+    const r = await fetch(`${API_URL}/auth/demo`, { method: 'GET' })
+    const setCookie = r.headers.get('set-cookie') ?? ''
+    const evRes = await fetch(`${API_URL}/events`, {
+      headers: { cookie: setCookie },
+    })
+    if (!evRes.ok) throw new Error(`status ${evRes.status}`)
+    const ranked = (await evRes.json()) as Array<{
+      event: {
+        id: string
+        title: string
+        description: string
+        location_text: string
+        start_time: string
+        tags: string[]
+        source: string
+      }
+    }>
+    return ranked.map((r) => ({
+      id: r.event.id,
+      title: r.event.title,
+      description: r.event.description,
+      location: r.event.location_text,
+      startTime: new Date(r.event.start_time),
+      tags: r.event.tags,
+      category: r.event.tags[0] ?? 'Event',
+      source: r.event.source,
+    }))
+  } catch (err) {
+    console.warn('[Nudge chat] backend unreachable, using mock events:', err)
+    return availableEvents.map((e) => ({
+      id: e.id,
+      title: e.title,
+      description: e.description,
+      location: e.location,
+      startTime: e.startTime,
+      tags: e.tags,
+      category: e.category,
+      source: e.source,
+    }))
+  }
+}
+
 export const maxDuration = 30
 
 // Tool definitions
@@ -25,9 +78,9 @@ const searchEventsTool = tool({
   async *execute({ query, category, source }) {
     yield { state: 'searching' as const, query }
 
-    await new Promise((resolve) => setTimeout(resolve, 800))
+    const live = await fetchLiveEvents()
 
-    const results = availableEvents.filter((event) => {
+    const results = live.filter((event) => {
       const matchesQuery =
         query === '' ||
         event.title.toLowerCase().includes(query.toLowerCase()) ||

@@ -5,45 +5,63 @@ import type {
   EventSource,
 } from "./mockData"
 import type { NudgeProfile } from "./profile"
+import type { RankedEvent } from "./api-client"
+
+/**
+ * Convert a backend RankedEvent into the EventSuggestion shape the UI uses.
+ */
+export function rankedToSuggestion(r: RankedEvent): EventSuggestion {
+  const event: AvailableEvent = {
+    id: r.event.id,
+    title: r.event.title,
+    description: r.event.description,
+    location: r.event.location_text,
+    startTime: new Date(r.event.start_time),
+    endTime: new Date(r.event.end_time),
+    source: mapSource(r.event.source),
+    category: r.event.tags[0] ?? "Event",
+    tags: r.event.tags,
+  }
+  const reasoning: string[] = [r.reason]
+  // Surface signal breakdown as bullets so the demo can show "why"
+  if (r.signals) {
+    if (r.signals.interest >= 0.8) reasoning.push("Strong match with your interests")
+    if (r.signals.location >= 0.8) reasoning.push("Close by — short travel time")
+    if (r.signals.cost === 1) reasoning.push("Free")
+    if (r.conflict) reasoning.push("⚠ Conflicts with your calendar")
+  }
+  return {
+    event,
+    matchScore: Math.round(r.score * 100),
+    matchReason: r.reason,
+    reasoning,
+  }
+}
+
+function mapSource(s: string): EventSource {
+  const lower = s.toLowerCase()
+  if (lower.includes("eventbrite")) return "Eventbrite"
+  if (lower.includes("engage") || lower.includes("luma") || lower.includes("partiful"))
+    return "Campus Portal"
+  if (lower.includes("wasserman") || lower.includes("career")) return "Career Center"
+  return "Newsletter"
+}
 
 /**
  * ============================================================
- *  TEAMMATE INTEGRATION POINT
+ *  TEAMMATE INTEGRATION POINT (legacy stub, kept for fallback)
  * ============================================================
  *
- *  Replace the body of `searchEvents()` below with a call to your
- *  Claude + real-events API code. The UI already consumes
- *  EventSuggestion[] — you don't need to touch any UI code.
- *
- *  INPUT:
- *    profile.interests : string[]   e.g. ["tech", "ai", "finance"]
- *    profile.bio       : string     free-text from onboarding
- *    calendar          : CalendarEvent[]   user's existing events
- *
- *  OUTPUT: EventSuggestion[] where each item is:
- *    {
- *      event: {
- *        id, title, description, location,
- *        startTime: Date, endTime: Date,
- *        source: 'Eventbrite' | 'Campus Portal' | 'Career Center' | 'Newsletter',
- *        category: string, tags: string[],
- *      },
- *      matchScore: number     0-100, higher = better fit
- *      matchReason: string    one-line why this matches
- *      reasoning: string[]    bullets explaining the recommendation
- *    }
- *
- *  CONSTRAINTS:
- *    - Filter out events that overlap with `calendar` busy times.
- *    - Rank by relevance to interests + bio.
- *    - Return 5-10 results.
+ *  This function is now only used as a fallback when the backend
+ *  API is unreachable. The real ranking happens server-side at
+ *  /events on the FastAPI backend (see lib/api-client.ts).
  * ============================================================
  */
 export async function searchEvents(
   profile: NudgeProfile,
   calendar: CalendarEvent[],
 ): Promise<EventSuggestion[]> {
-  // === MOCK IMPLEMENTATION (replace when teammate wires real API) ===
+  // === LOCAL FALLBACK MOCK (only fires if backend API is down) ===
   const now = new Date()
   const tomorrow = addDays(now, 1)
   const dayAfter = addDays(now, 2)
@@ -57,10 +75,9 @@ export async function searchEvents(
   if (interestSet.has("tech") || interestSet.has("ai") || interestSet.has("entrepreneurship")) {
     pool.push(
       makeSuggestion({
-        id: "mock-ai-mixer",
+        id: "fallback-ai-mixer",
         title: "NYC AI Founders Mixer",
-        description:
-          "Casual networking with early-stage AI founders. OpenAI, Anthropic, and DeepMind alumni confirmed.",
+        description: "Casual networking with early-stage AI founders.",
         location: "Soho House, 29-35 9th Ave",
         start: setHour(tomorrow, 19),
         end: setHour(tomorrow, 22),
@@ -70,9 +87,8 @@ export async function searchEvents(
         matchScore: 94,
         matchReason: "Matches your AI and entrepreneurship interests",
         reasoning: [
-          "You picked AI and entrepreneurship as top interests",
-          "Evening event — won't conflict with classes",
-          "High-signal networking for early-career builders",
+          "Backend offline — showing fallback recommendations",
+          "Matches AI + entrepreneurship",
         ],
       }),
     )
@@ -80,141 +96,39 @@ export async function searchEvents(
   if (interestSet.has("finance")) {
     pool.push(
       makeSuggestion({
-        id: "mock-stern-ib",
-        title: "Stern Investment Banking Panel",
-        description:
-          "Goldman, JPM, and Evercore VPs talk Summer 2026 IB recruiting and what gets resumes pulled.",
+        id: "fallback-stern-ib",
+        title: "Stern IB Recruiting Panel",
+        description: "Goldman, JPM, Evercore VPs talk Summer 2026 IB recruiting.",
         location: "NYU Stern KMC 2-60",
         start: setHour(dayAfter, 18),
         end: setHour(dayAfter, 20),
         source: "Career Center",
         category: "Career",
-        tags: ["finance", "career", "ib"],
+        tags: ["finance", "career"],
         matchScore: 96,
-        matchReason: "Perfect for IB Summer 2026 recruiting",
-        reasoning: [
-          "Direct fit for your finance interest",
-          "Focused on Summer 2026 IB internships",
-          "On-campus, easy to attend",
-        ],
+        matchReason: "Backend offline — fallback fit for IB Summer 2026",
+        reasoning: ["Backend offline", "Direct fit for finance interest"],
       }),
     )
   }
-  if (interestSet.has("music")) {
-    pool.push(
-      makeSuggestion({
-        id: "mock-vw",
-        title: "Vampire Weekend at Webster Hall",
-        description: "Surprise NYC show. Limited tickets remaining.",
-        location: "Webster Hall, 125 E 11th St",
-        start: setHour(in3Days, 20),
-        end: setHour(in3Days, 23),
-        source: "Eventbrite",
-        category: "Music",
-        tags: ["music", "concert", "nyc"],
-        matchScore: 82,
-        matchReason: "Walking distance from NYU + matches your music interest",
-        reasoning: [
-          "You picked music as an interest",
-          "5-min walk from Bobst",
-          "Tickets selling fast",
-        ],
-      }),
-    )
-  }
-  if (interestSet.has("food")) {
-    pool.push(
-      makeSuggestion({
-        id: "mock-smorg",
-        title: "Smorgasburg Williamsburg",
-        description: "100+ NYC food vendors. Try the Ramen Burger and Big Mozz.",
-        location: "90 Kent Ave, Brooklyn",
-        start: setHour(in4Days, 11),
-        end: setHour(in4Days, 18),
-        source: "Eventbrite",
-        category: "Food",
-        tags: ["food", "weekend"],
-        matchScore: 70,
-        matchReason: "Open-format weekend event you can drop into",
-        reasoning: [
-          "Matches your food interest",
-          "Drop-in format — no commitment",
-          "Saturday afternoon, free time",
-        ],
-      }),
-    )
-  }
-  if (interestSet.has("networking") || interestSet.has("entrepreneurship")) {
-    pool.push(
-      makeSuggestion({
-        id: "mock-coffee",
-        title: "Cornell Tech x NYU Founders Coffee",
-        description: "Open coffee chat for student founders. No pitch, just hang.",
-        location: "Think Coffee, 248 Mercer St",
-        start: setHour(tomorrow, 10),
-        end: setHour(tomorrow, 12),
-        source: "Newsletter",
-        category: "Networking",
-        tags: ["entrepreneurship", "networking", "students"],
-        matchScore: 78,
-        matchReason: "Casual networking that fits your morning",
-        reasoning: [
-          "Matches networking + entrepreneurship interests",
-          "2-min walk from Stern",
-          "Drop-in style — leave when you want",
-        ],
-      }),
-    )
-  }
-  if (interestSet.has("academic") || interestSet.has("research")) {
-    pool.push(
-      makeSuggestion({
-        id: "mock-courant",
-        title: "Courant Institute AI Safety Talk",
-        description:
-          "Anthropic researcher on alignment evaluations. Q&A and reception after.",
-        location: "Courant Institute, 251 Mercer St",
-        start: setHour(in5Days, 16),
-        end: setHour(in5Days, 18),
-        source: "Campus Portal",
-        category: "Academic",
-        tags: ["ai", "research", "talk"],
-        matchScore: 88,
-        matchReason: "Research + AI overlap",
-        reasoning: [
-          "You picked academic talks and research",
-          "On-campus and free",
-          "Reception is great for 1:1s with the speaker",
-        ],
-      }),
-    )
-  }
-
-  // Generic fallback if interests didn't hit any bucket
   if (pool.length === 0) {
     pool.push(
       makeSuggestion({
-        id: "mock-fallback-openmic",
+        id: "fallback-openmic",
         title: "Washington Square Park Open Mic",
-        description: "Weekly community open mic. Show up, listen, or perform.",
+        description: "Weekly community open mic.",
         location: "Washington Square Park",
         start: setHour(tomorrow, 17),
         end: setHour(tomorrow, 19),
         source: "Newsletter",
         category: "Community",
-        tags: ["community", "outdoors"],
+        tags: ["community"],
         matchScore: 60,
-        matchReason: "Low-commitment local pick while we learn more about you",
-        reasoning: [
-          "Free, open to all",
-          "5-min walk from anywhere on campus",
-          "Update your interests on /profile for better picks",
-        ],
+        matchReason: "Backend offline — fallback local pick",
+        reasoning: ["Backend offline"],
       }),
     )
   }
-
-  // Drop anything that overlaps with the user's existing calendar
   return pool
     .filter((s) => !conflictsWithCalendar(s.event, calendar))
     .sort((a, b) => b.matchScore - a.matchScore)

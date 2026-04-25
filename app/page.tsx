@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation"
 import { auth } from "@/auth"
 import { fetchGoogleCalendarEvents } from "@/lib/google-calendar"
-import { calendarEvents as mockCalendarEvents, userProfile as mockUserProfile } from "@/lib/mockData"
+import { calendarEvents as mockCalendarEvents } from "@/lib/mockData"
 import { getProfile } from "@/lib/profile"
 import { searchEvents } from "@/lib/event-search"
+import { isDemoMode, DEMO_USER, DEMO_PROFILE } from "@/lib/demo"
 import CampusAgentClient from "./campus-agent-client"
 
 interface PageProps {
@@ -12,78 +13,62 @@ interface PageProps {
 
 export default async function Page({ searchParams }: PageProps) {
   const params = await searchParams
-  const isDemo = params.demo === "1"
+  const demo = isDemoMode(params)
 
-  // Demo mode: skip auth and use mock data
-  if (isDemo) {
-    // Use mock data for demo mode
-    let suggestions: Awaited<ReturnType<typeof searchEvents>> = []
-    try {
-      suggestions = await searchEvents(mockUserProfile, mockCalendarEvents)
-    } catch (err) {
-      console.error("[Nudge] Demo suggestion generation failed:", err)
-    }
-
+  // ---------- DEMO MODE (for v0 previews) ----------
+  if (demo) {
+    const events = mockCalendarEvents
+    const fallback = await searchEvents(DEMO_PROFILE, events).catch(() => [])
     return (
       <CampusAgentClient
-        calendarEvents={mockCalendarEvents}
-        initialSuggestions={suggestions}
-        userName={mockUserProfile.name}
-        userEmail="demo@stanford.edu"
-        profileInterests={mockUserProfile.interests}
+        calendarEvents={events}
+        initialSuggestions={fallback}
+        userName={DEMO_USER.name}
+        userEmail={DEMO_USER.email}
+        profileInterests={DEMO_PROFILE.interests}
+        backendEnabled
       />
     )
   }
 
+  // ---------- REAL AUTH FLOW ----------
   const session = await auth()
-
-  // Not signed in → bounce to login
   if (!session?.user) {
     redirect("/login")
   }
 
-  // Signed in but no profile yet → bounce to onboarding
   const profile = await getProfile()
   if (!profile) {
     redirect("/onboarding")
   }
 
-  // Try to fetch real Google Calendar events.
-  // If the API call fails (token issue, scope missing, network), fall back
-  // to mocks so the demo never breaks. If it succeeds (even with 0 events),
-  // use real data.
+  // Fetch user's existing Google Calendar events on the server (we have the
+  // accessToken here). Fall back to mock if the API call fails.
   let events = mockCalendarEvents
-  let usedRealData = false
   if (session.accessToken) {
     try {
       const real = await fetchGoogleCalendarEvents(session.accessToken)
       events = real
-      usedRealData = true
-      console.log(`[Nudge] Loaded ${real.length} real calendar events`)
     } catch (err) {
       console.error("[Nudge] Calendar fetch failed, using mock data:", err)
     }
   }
-  console.log(
-    `[Nudge] usedRealData=${usedRealData}, eventCount=${events.length}`,
-  )
 
-  // Generate personalized event suggestions based on the user's profile
-  // and existing schedule. Falls back to empty array on error.
-  let suggestions: Awaited<ReturnType<typeof searchEvents>> = []
-  try {
-    suggestions = await searchEvents(profile, events)
-  } catch (err) {
-    console.error("[Nudge] Suggestion generation failed:", err)
-  }
+  // Initial suggestions: local fallback. The client will immediately
+  // try to refetch real ranked events from the FastAPI backend at
+  // NEXT_PUBLIC_API_URL after mount (it has the cookies).
+  const fallbackSuggestions = await searchEvents(profile, events).catch(
+    () => [],
+  )
 
   return (
     <CampusAgentClient
       calendarEvents={events}
-      initialSuggestions={suggestions}
+      initialSuggestions={fallbackSuggestions}
       userName={session.user.name ?? undefined}
       userEmail={session.user.email ?? undefined}
       profileInterests={profile.interests}
+      backendEnabled
     />
   )
 }
