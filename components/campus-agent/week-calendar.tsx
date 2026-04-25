@@ -1,7 +1,8 @@
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
-import { addDays, startOfWeek, format, isSameDay, isToday } from 'date-fns'
+import { addDays, startOfWeek, format, isSameDay, isToday, addWeeks, subWeeks } from 'date-fns'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { CalendarEvent, EventSuggestion } from '@/lib/mockData'
 
@@ -76,9 +77,47 @@ export function WeekCalendar({ events, suggestions, addedEventIds }: WeekCalenda
     return suggestions.filter(s => !addedEventIds.has(s.event.id))
   }, [suggestions, addedEventIds])
 
+  const weekEnd = addDays(weekStart, 6)
+  const weekRangeLabel =
+    format(weekStart, 'MMM') === format(weekEnd, 'MMM')
+      ? `${format(weekStart, 'MMM d')} – ${format(weekEnd, 'd, yyyy')}`
+      : `${format(weekStart, 'MMM d')} – ${format(weekEnd, 'MMM d, yyyy')}`
+
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card">
-      {/* Header */}
+      {/* Week navigation toolbar */}
+      <div className="flex items-center justify-between border-b border-border bg-muted/30 px-3 py-2">
+        <button
+          type="button"
+          onClick={() => setCurrentDate((d) => subWeeks(d, 1))}
+          className="flex h-7 w-7 items-center justify-center rounded-md text-app-muted transition hover:bg-app-surface hover:text-app-text"
+          aria-label="Previous week"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <div className="flex items-center gap-2">
+          <span className="text-[12px] font-medium text-app-text">{weekRangeLabel}</span>
+          {isClient && (
+            <button
+              type="button"
+              onClick={() => setCurrentDate(new Date())}
+              className="rounded-md border border-app-border-strong px-2 py-0.5 text-[10.5px] font-medium text-app-muted transition hover:bg-app-surface hover:text-app-text"
+            >
+              Today
+            </button>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => setCurrentDate((d) => addWeeks(d, 1))}
+          className="flex h-7 w-7 items-center justify-center rounded-md text-app-muted transition hover:bg-app-surface hover:text-app-text"
+          aria-label="Next week"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Day-of-week header */}
       <div className="flex border-b border-border bg-muted/30">
         <div className="w-14 flex-shrink-0" />
         {DAYS.map((dayOffset) => {

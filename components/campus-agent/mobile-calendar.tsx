@@ -7,7 +7,10 @@ import {
   format,
   isSameDay,
   isToday,
+  addWeeks,
+  subWeeks,
 } from 'date-fns'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { CalendarEvent, EventSuggestion } from '@/lib/mockData'
 
@@ -25,13 +28,17 @@ const FIXED_REFERENCE_DATE = new Date('2026-04-20T12:00:00')
 export function MobileCalendar({ events, suggestions, addedEventIds }: MobileCalendarProps) {
   const [selectedDay, setSelectedDay] = useState(new Date().getDay())
   const [isClient, setIsClient] = useState(false)
+  const [weekOffset, setWeekOffset] = useState(0)
 
   useEffect(() => {
     setSelectedDay(new Date().getDay())
     setIsClient(true)
   }, [])
 
-  const weekStart = useMemo(() => startOfWeek(isClient ? new Date() : FIXED_REFERENCE_DATE, { weekStartsOn: 0 }), [isClient])
+  const weekStart = useMemo(() => {
+    const base = startOfWeek(isClient ? new Date() : FIXED_REFERENCE_DATE, { weekStartsOn: 0 })
+    return addWeeks(base, weekOffset)
+  }, [isClient, weekOffset])
 
   // Combine events with added suggestions
   const allEvents = useMemo(() => {
@@ -66,9 +73,47 @@ export function MobileCalendar({ events, suggestions, addedEventIds }: MobileCal
            suggestions.some(s => !addedEventIds.has(s.event.id) && isSameDay(s.event.startTime, date))
   }
 
+  const weekEnd = addDays(weekStart, 6)
+  const weekRangeLabel =
+    format(weekStart, 'MMM') === format(weekEnd, 'MMM')
+      ? `${format(weekStart, 'MMM d')} – ${format(weekEnd, 'd')}`
+      : `${format(weekStart, 'MMM d')} – ${format(weekEnd, 'MMM d')}`
+
   return (
     <div className="flex h-full flex-col">
-      {/* Week selector - styled like the frontend branch */}
+      {/* Week navigation */}
+      <div className="mb-3 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => setWeekOffset((w) => w - 1)}
+          className="flex h-8 w-8 items-center justify-center rounded-md text-app-muted transition hover:bg-app-surface hover:text-app-text"
+          aria-label="Previous week"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <div className="flex items-center gap-2">
+          <span className="text-[13px] font-medium text-app-text">{weekRangeLabel}</span>
+          {weekOffset !== 0 && (
+            <button
+              type="button"
+              onClick={() => setWeekOffset(0)}
+              className="rounded-md border border-app-border-strong px-2 py-0.5 text-[11px] font-medium text-app-muted transition hover:bg-app-surface hover:text-app-text"
+            >
+              Today
+            </button>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => setWeekOffset((w) => w + 1)}
+          className="flex h-8 w-8 items-center justify-center rounded-md text-app-muted transition hover:bg-app-surface hover:text-app-text"
+          aria-label="Next week"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Week selector */}
       <div className="mb-4 grid grid-cols-7 gap-1.5">
         {DAY_LABELS.map((d, i) => {
           const date = addDays(weekStart, i)
