@@ -14,16 +14,20 @@ export default async function Page() {
 
   // Signed in: try to fetch real Google Calendar events.
   // If the API call fails (token issue, scope missing, network), fall back to mocks
-  // so the demo never breaks.
+  // so the demo never breaks. If it succeeds (even with 0 events), use real data.
   let events = mockCalendarEvents
+  let usedRealData = false
   if (session.accessToken) {
     try {
       const real = await fetchGoogleCalendarEvents(session.accessToken)
-      if (real.length > 0) events = real
+      events = real
+      usedRealData = true
+      console.log(`[Nudge] Loaded ${real.length} real calendar events`)
     } catch (err) {
       console.error("[Nudge] Calendar fetch failed, using mock data:", err)
     }
   }
+  console.log(`[Nudge] usedRealData=${usedRealData}, eventCount=${events.length}`)
 
   return (
     <CampusAgentClient
