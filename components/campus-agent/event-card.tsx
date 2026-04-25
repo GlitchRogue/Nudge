@@ -1,13 +1,24 @@
 'use client'
 
 import { useState } from 'react'
-import { MapPin, Clock, ChevronDown, ChevronUp, AlertTriangle, Check, Plus, MessageCircle } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { format } from 'date-fns'
+import { ChevronDown, ChevronUp, AlertTriangle, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { EventSuggestion, sourceBadgeColors } from '@/lib/mockData'
-import { ClientTime } from '@/components/ui/client-time'
+
+// Visual tag mapping based on event category
+const TAG_META: Record<string, { label: string; color: string }> = {
+  'Career': { label: 'Networking', color: '#2563EB' },
+  'Social': { label: 'Fun', color: '#9333EA' },
+  'Food': { label: 'Food', color: '#EA580C' },
+  'Academic': { label: 'Academic', color: '#059669' },
+  'Workshop': { label: 'Popup', color: '#DC2626' },
+  'default': { label: 'Event', color: '#6B7280' },
+}
+
+function getVisualTag(category: string) {
+  return TAG_META[category] || TAG_META['default']
+}
 
 interface EventCardProps {
   suggestion: EventSuggestion
@@ -26,136 +37,130 @@ export function EventCard({
 }: EventCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const { event, matchScore, matchReason, reasoning, conflict } = suggestion
-
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-success bg-success/10'
-    if (score >= 60) return 'text-primary bg-primary/10'
-    return 'text-muted-foreground bg-muted'
-  }
+  const tag = getVisualTag(event.category)
+  const lowSpots = event.spotsLeft !== undefined && event.spotsLeft <= 10
+  const faded = matchScore < 30
 
   return (
-    <Card className={cn(
-      'transition-all duration-200 hover:shadow-md',
-      isAdded && 'ring-2 ring-success/50'
+    <article className={cn(
+      'mb-3 overflow-hidden rounded-2xl border border-app-border bg-app-card transition-opacity',
+      faded && 'opacity-50',
+      isAdded && 'ring-2 ring-brand/50'
     )}>
-      <CardContent className="p-3 sm:p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-              <Badge variant="secondary" className={cn('text-xs', sourceBadgeColors[event.source])}>
-                {event.source}
-              </Badge>
-              {event.spotsLeft !== undefined && event.spotsLeft <= 10 && (
-                <Badge variant="outline" className="text-xs text-destructive">
-                  {event.spotsLeft} spots left
-                </Badge>
-              )}
-            </div>
-
-            <h3 className="mb-1 text-base font-semibold text-foreground">{event.title}</h3>
-
-            <div className="mb-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <MapPin className="h-3.5 w-3.5" />
-                {event.location}
-              </span>
-              <span className="flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" />
-                <ClientTime date={event.startTime} />
-              </span>
-            </div>
-
-            <p className="text-sm text-muted-foreground">{matchReason}</p>
-          </div>
-
-          <div className={cn(
-            'flex h-12 w-12 flex-shrink-0 flex-col items-center justify-center rounded-lg',
-            getScoreColor(matchScore)
+      {/* Color bar at top */}
+      <div className="h-1" style={{ background: tag.color }} />
+      
+      <div className="px-4 pb-3 pt-3">
+        {/* Header row */}
+        <div className="flex items-center justify-between">
+          <span 
+            className="inline-flex items-center gap-1.5 text-[11px] font-medium tracking-[0.06em]"
+            style={{ color: tag.color }}
+          >
+            <span className="h-[7px] w-[7px] rounded-full" style={{ background: tag.color }} />
+            {tag.label}
+          </span>
+          <span className="text-[12px] font-medium text-app-muted">
+            {format(event.startTime, 'h:mm a')}
+          </span>
+        </div>
+        
+        {/* Title and description */}
+        <h3 className="mb-1 mt-2 text-[15.5px] font-medium leading-snug text-app-text">
+          {event.title}
+        </h3>
+        <p className="mb-2.5 text-[12.5px] leading-snug text-app-muted">
+          {event.description}
+        </p>
+        
+        {/* Meta row */}
+        <div className="mb-2.5 flex flex-wrap items-center gap-2">
+          <span className={cn('rounded-full px-2.5 py-0.5 text-[11px] font-medium', sourceBadgeColors[event.source])}>
+            {event.source}
+          </span>
+          <span className="text-[12px] text-app-muted">{event.location}</span>
+          {lowSpots && (
+            <span className="text-[11px] font-medium text-orange-600 dark:text-orange-400">
+              {event.spotsLeft} spots left
+            </span>
+          )}
+          <span className={cn(
+            'ml-auto text-[11px] font-medium',
+            matchScore >= 50 ? 'text-brand' : 'text-app-muted'
           )}>
-            <span className="text-lg font-bold">{matchScore}</span>
-            <span className="text-[10px] uppercase tracking-wide opacity-70">match</span>
-          </div>
+            {matchScore}%
+          </span>
         </div>
 
+        {/* Conflict warning */}
         {conflict && (
-          <div className="mt-3 rounded-lg bg-warning/10 p-3">
+          <div className="mb-3 rounded-xl bg-orange-50 p-3 dark:bg-orange-950/30">
             <div className="flex items-start gap-2">
-              <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-warning-foreground" />
+              <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-orange-600 dark:text-orange-400" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-warning-foreground">
+                <p className="text-[12px] font-medium text-orange-800 dark:text-orange-200">
                   Conflicts with: {conflict.existingEvent.title}
                 </p>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <p className="mt-1 text-[11px] text-orange-700 dark:text-orange-300">
                   {conflict.proposedRearrangement}
                 </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-2"
+                <button
+                  type="button"
                   onClick={() => onApproveRearrangement(event.id)}
+                  className="mt-2 rounded-lg border border-orange-300 bg-white px-3 py-1.5 text-[11px] font-medium text-orange-800 transition hover:bg-orange-50 dark:border-orange-700 dark:bg-orange-900/50 dark:text-orange-200"
                 >
-                  <Check className="mr-1.5 h-3.5 w-3.5" />
+                  <Check className="mr-1 inline h-3 w-3" />
                   Approve
-                </Button>
+                </button>
               </div>
             </div>
           </div>
         )}
 
+        {/* Expand reasoning */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="mt-3 flex w-full items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          className="mb-2 flex w-full items-center gap-1 text-[11px] text-app-muted hover:text-app-text"
         >
           {isExpanded ? (
             <>
-              <ChevronUp className="h-4 w-4" />
+              <ChevronUp className="h-3.5 w-3.5" />
               Hide reasoning
             </>
           ) : (
             <>
-              <ChevronDown className="h-4 w-4" />
-              Show reasoning
+              <ChevronDown className="h-3.5 w-3.5" />
+              Why this matches
             </>
           )}
         </button>
 
         {isExpanded && (
-          <ul className="mt-2 space-y-1 border-t border-border pt-3">
+          <ul className="mb-3 space-y-1 border-t border-app-border pt-2">
             {reasoning.map((reason, index) => (
-              <li key={index} className="flex items-start gap-2 text-sm text-muted-foreground">
-                <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary" />
+              <li key={index} className="flex items-start gap-2 text-[12px] text-app-muted">
+                <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-brand" />
                 {reason}
               </li>
             ))}
           </ul>
         )}
 
-        <div className="mt-3 flex flex-col gap-2 sm:mt-4 sm:flex-row">
-          <Button
-            variant={isAdded ? 'secondary' : 'default'}
-            size="sm"
-            className="flex-1 text-xs sm:text-sm"
-            onClick={() => onAddToCalendar(event.id)}
-            disabled={isAdded}
-          >
-            {isAdded ? (
-              <>
-                <Check className="mr-1.5 h-3.5 w-3.5" />
-                Added
-              </>
-            ) : (
-              <>
-                <Plus className="mr-1.5 h-3.5 w-3.5" />
-                Add to calendar
-              </>
-            )}
-          </Button>
-          <Button variant="outline" size="sm" className="text-xs sm:text-sm" onClick={() => onTellMeMore(event.id)}>
-            <MessageCircle className="mr-1.5 h-3.5 w-3.5" />
-            Tell me more
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+        {/* Action button */}
+        <button
+          type="button"
+          onClick={() => isAdded ? onTellMeMore(event.id) : onAddToCalendar(event.id)}
+          disabled={isAdded}
+          className={cn(
+            'w-full rounded-lg border py-2 text-[12px] font-medium transition',
+            isAdded
+              ? 'border-brand bg-brand-bg text-brand'
+              : 'border-app-border-strong text-app-subtle hover:bg-app-surface'
+          )}
+        >
+          {isAdded ? 'Added to Calendar' : 'Add to Calendar'}
+        </button>
+      </div>
+    </article>
   )
 }

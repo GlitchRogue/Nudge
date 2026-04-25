@@ -83,14 +83,16 @@ export default function CampusAgentClient({
   )
 
   return (
-    <div className="flex h-screen flex-col bg-background">
-      <TopNav
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        onReset={handleReset}
-        userName={userName}
-        userEmail={userEmail}
-      />
+    <div className="flex min-h-screen flex-col bg-app-surface">
+      {/* Centered container like frontend design */}
+      <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-app-bg lg:max-w-none">
+        <TopNav
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          onReset={handleReset}
+          userName={userName}
+          userEmail={userEmail}
+        />
 
       {activeTab === 'suggestions' ? (
         <>
@@ -162,46 +164,46 @@ export default function CampusAgentClient({
             </div>
 
             {/* Mobile Bottom Tab Bar */}
-            <div className="flex-shrink-0 border-t border-border bg-card">
-              <div className="flex">
+            <nav className="flex-shrink-0 border-t border-app-border bg-app-bg pt-2 pb-3.5">
+              <div className="grid grid-cols-3">
                 <button
                   onClick={() => setMobileTab('calendar')}
                   className={cn(
-                    'flex flex-1 flex-col items-center gap-1 py-3 text-xs font-medium transition-colors',
+                    'flex flex-col items-center gap-1 py-2 text-[11px] font-medium transition-colors',
                     mobileTab === 'calendar'
-                      ? 'text-primary'
-                      : 'text-muted-foreground hover:text-foreground'
+                      ? 'text-brand'
+                      : 'text-app-subtle'
                   )}
                 >
-                  <Calendar className={cn('h-5 w-5', mobileTab === 'calendar' && 'text-primary')} />
-                  Calendar
+                  <Calendar className="h-5 w-5" />
+                  Week
                 </button>
                 <button
                   onClick={() => setMobileTab('chat')}
                   className={cn(
-                    'flex flex-1 flex-col items-center gap-1 py-3 text-xs font-medium transition-colors',
+                    'flex flex-col items-center gap-1 py-2 text-[11px] font-medium transition-colors',
                     mobileTab === 'chat'
-                      ? 'text-primary'
-                      : 'text-muted-foreground hover:text-foreground'
+                      ? 'text-brand'
+                      : 'text-app-subtle'
                   )}
                 >
-                  <MessageSquare className={cn('h-5 w-5', mobileTab === 'chat' && 'text-primary')} />
-                  Chat
+                  <MessageSquare className="h-5 w-5" />
+                  Ask Nudge
                 </button>
                 <button
                   onClick={() => setMobileTab('events')}
                   className={cn(
-                    'flex flex-1 flex-col items-center gap-1 py-3 text-xs font-medium transition-colors',
+                    'flex flex-col items-center gap-1 py-2 text-[11px] font-medium transition-colors',
                     mobileTab === 'events'
-                      ? 'text-primary'
-                      : 'text-muted-foreground hover:text-foreground'
+                      ? 'text-brand'
+                      : 'text-app-subtle'
                   )}
                 >
-                  <Sparkles className={cn('h-5 w-5', mobileTab === 'events' && 'text-primary')} />
+                  <Sparkles className="h-5 w-5" />
                   Events
                 </button>
               </div>
-            </div>
+            </nav>
           </div>
         </>
       ) : (
@@ -209,6 +211,7 @@ export default function CampusAgentClient({
           <GroupTab onBack={() => setActiveTab('suggestions')} />
         </div>
       )}
+      </div>
     </div>
   )
 }
