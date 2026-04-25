@@ -1,7 +1,7 @@
 import Link from "next/link"
-import Image from "next/image"
 import { redirect } from "next/navigation"
 import { auth, signIn } from "@/auth"
+import { LoginLogo } from "./login-logo"
 
 export default async function LoginPage() {
   // If they're already signed in, send them to the app
@@ -13,26 +13,9 @@ export default async function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-app-surface p-4">
       <div className="w-full max-w-sm space-y-8 rounded-3xl border border-app-border bg-app-bg p-8 shadow-sm">
-        {/* Brand - Full logo with wordmark */}
+        {/* Brand - Full logo with wordmark (SVG, no background) */}
         <div className="flex flex-col items-center space-y-4 text-center">
-          {/* Light mode logo (shown by default, hidden in dark) */}
-          <Image
-            src="/logo-light.png"
-            alt="Nudge"
-            width={160}
-            height={55}
-            className="dark:hidden"
-            priority
-          />
-          {/* Dark mode logo (hidden by default, shown in dark) */}
-          <Image
-            src="/logo-dark.png"
-            alt="Nudge"
-            width={160}
-            height={55}
-            className="hidden dark:block"
-            priority
-          />
+          <LoginLogo />
           <p className="text-sm text-app-subtle">
             Your AI scheduling assistant
           </p>
