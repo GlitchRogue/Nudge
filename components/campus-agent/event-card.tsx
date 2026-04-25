@@ -1,10 +1,25 @@
 'use client'
 
-import { useState } from 'react'
-import { format } from 'date-fns'
+import { useState, useEffect } from 'react'
 import { ChevronDown, ChevronUp, AlertTriangle, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { EventSuggestion, sourceBadgeColors } from '@/lib/mockData'
+
+// Format time consistently to avoid hydration mismatches
+function useFormattedTime(date: Date) {
+  const [time, setTime] = useState<string>('')
+  
+  useEffect(() => {
+    // Use UTC formatting to be consistent
+    const hours = date.getUTCHours()
+    const minutes = date.getUTCMinutes()
+    const ampm = hours >= 12 ? 'PM' : 'AM'
+    const hour12 = hours % 12 || 12
+    setTime(`${hour12}:${minutes.toString().padStart(2, '0')} ${ampm}`)
+  }, [date])
+  
+  return time || '--:--'
+}
 
 // Visual tag mapping based on event category
 const TAG_META: Record<string, { label: string; color: string }> = {
@@ -40,6 +55,7 @@ export function EventCard({
   const tag = getVisualTag(event.category)
   const lowSpots = event.spotsLeft !== undefined && event.spotsLeft <= 10
   const faded = matchScore < 30
+  const formattedTime = useFormattedTime(event.startTime)
 
   return (
     <article className={cn(
@@ -61,7 +77,7 @@ export function EventCard({
             {tag.label}
           </span>
           <span className="text-[12px] font-medium text-app-muted">
-            {format(event.startTime, 'h:mm a')}
+            {formattedTime}
           </span>
         </div>
         

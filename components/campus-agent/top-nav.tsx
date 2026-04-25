@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useTheme } from 'next-themes'
 import { useEffect, useState } from 'react'
+import { NudgeLogo } from '@/components/nudge-logo'
 
 interface TopNavProps {
   activeTab: 'suggestions' | 'group'
@@ -27,13 +28,18 @@ export function TopNav({ activeTab, onTabChange, onReset, userName, userEmail }:
 
   return (
     <header className="flex items-start justify-between px-5 pt-4 pb-3">
-      <div>
-        <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-app-muted">
-          {activeTab === 'suggestions' ? 'YOUR NUDGES' : 'GROUP VIEW'}
-        </p>
-        <h1 className="text-[26px] font-medium tracking-tight text-app-text">
-          Your <span className="text-brand">Nudges</span>
-        </h1>
+      <div className="flex items-start gap-3">
+        {/* Nudge mark logo */}
+        <NudgeLogo variant="mark" className="h-10 w-10 flex-shrink-0" />
+        
+        <div>
+          <p className="mb-0.5 text-[11px] font-medium uppercase tracking-[0.08em] text-app-muted">
+            {activeTab === 'suggestions' ? 'YOUR NUDGES' : 'GROUP VIEW'}
+          </p>
+          <h1 className="text-[22px] font-medium tracking-tight text-app-text">
+            Your <span className="text-brand">Nudges</span>
+          </h1>
+        </div>
       </div>
       
       {/* Dark mode toggle */}
