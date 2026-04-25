@@ -9,7 +9,7 @@ import {
   validateUIMessages,
 } from 'ai'
 import { z } from 'zod'
-import { availableEvents, calendarEvents, userProfile } from '@/lib/mockData'
+import { availableEvents, calendarEvents, userProfile } from '@/lib/mock'
 import { format } from 'date-fns'
 
 export const maxDuration = 30
