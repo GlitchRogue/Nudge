@@ -10,8 +10,27 @@ from ..schemas import EventOut, RankedEvent
 from ..ranker import rank_events
 from ..llm import generate_reason
 from .user import require_user
+from urllib.parse import quote_plus
 
 router = APIRouter()
+
+# Sources whose seed URLs are real and clickable. Other sources (engage,
+# wasserman, gmail) had placeholder URLs that 404'd, so we drop them entirely
+# from the public feed and only surface luma + eventbrite. Eventbrite seed
+# slugs are also fake, so we rewrite them to a real eventbrite search URL
+# at response time so the link always lands somewhere useful.
+ALLOWED_SOURCES = {"luma", "eventbrite"}
+
+
+def _real_url(ev: Event) -> str:
+    """Return a guaranteed-working URL for the event.
+
+    Luma slugs are real (we resolved them at scrape time).
+    Eventbrite seed slugs are placeholders — redirect to a search of the title.
+    """
+    if ev.source == "eventbrite":
+        return f"https://www.eventbrite.com/d/ny--new-york/{quote_plus(ev.title)}/"
+    return ev.url
 
 
 @router.get("", response_model=list[RankedEvent])
@@ -22,10 +41,11 @@ async def list_ranked_events(
 ):
     """Return events ranked for the current user.
 
-    Query param `source` filters by one of: eventbrite | engage | wasserman | gmail.
+    Query param `source` filters by one of: eventbrite | luma.
+    Other sources are filtered out because their URLs are placeholders.
     """
-    q = db.query(Event)
-    if source:
+    q = db.query(Event).filter(Event.source.in_(ALLOWED_SOURCES))
+    if source and source in ALLOWED_SOURCES:
         q = q.filter(Event.source == source)
     events = q.all()
 
@@ -71,8 +91,11 @@ async def list_ranked_events(
         else:
             res = next(results_iter)
             reason = res if isinstance(res, str) else "Matched on your interests and schedule."
+        ev_out = EventOut.model_validate(ev)
+        # Rewrite URL so eventbrite placeholders become a real search link.
+        ev_out.url = _real_url(ev)
         out.append(RankedEvent(
-            event=EventOut.model_validate(ev),
+            event=ev_out,
             score=r["score"],
             signals=r["signals"],
             reason=reason,

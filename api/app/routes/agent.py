@@ -33,7 +33,7 @@ async def draft_top(
     user: User = Depends(require_user),
     db: Session = Depends(get_db),
 ):
-    events = db.query(Event).all()
+    events = db.query(Event).filter(Event.source.in_(["luma", "eventbrite"])).all()
     calendar = db.query(CalendarEntry).filter(CalendarEntry.user_id == user.id).all()
     actions = db.query(Action).filter(Action.user_id == user.id).all()
 
@@ -270,7 +270,7 @@ async def chat(
     if not body.messages:
         raise HTTPException(400, "messages required")
 
-    events = db.query(Event).order_by(Event.start_time.asc()).all()
+    events = db.query(Event).filter(Event.source.in_(["luma", "eventbrite"])).order_by(Event.start_time.asc()).all()
     calendar = db.query(CalendarEntry).filter(CalendarEntry.user_id == user.id).all()
     actions = db.query(Action).filter(Action.user_id == user.id).all()
     ranked = rank_events(events, user, calendar, actions)
