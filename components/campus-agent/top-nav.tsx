@@ -1,6 +1,7 @@
 'use client'
 
-import { Settings, Moon, Sun, RotateCcw } from 'lucide-react'
+import Link from 'next/link'
+import { Settings, Moon, Sun, RotateCcw, User } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
 import {
@@ -79,6 +80,13 @@ export function TopNav({ activeTab, onTabChange, onReset }: TopNavProps) {
                   Dark mode
                 </>
               )}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/profile">
+                <User className="mr-2 h-4 w-4" />
+                Profile
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={onReset}>

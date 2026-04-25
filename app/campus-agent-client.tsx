@@ -11,28 +11,41 @@ import type { CalendarEvent, EventSuggestion } from '@/lib/mockData'
 
 interface CampusAgentClientProps {
   calendarEvents: CalendarEvent[]
+  initialSuggestions?: EventSuggestion[]
   userName?: string
   userEmail?: string
+  profileInterests?: string[]
 }
 
 export default function CampusAgentClient({
   calendarEvents,
+  initialSuggestions,
   userName,
   userEmail,
+  profileInterests,
 }: CampusAgentClientProps) {
   const [activeTab, setActiveTab] = useState<'suggestions' | 'group'>('suggestions')
-  const [suggestions, setSuggestions] = useState<EventSuggestion[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [suggestions, setSuggestions] = useState<EventSuggestion[]>(
+    initialSuggestions ?? [],
+  )
+  const [isLoading, setIsLoading] = useState(
+    !initialSuggestions || initialSuggestions.length === 0,
+  )
   const [addedEventIds, setAddedEventIds] = useState<Set<string>>(new Set())
 
-  // Generate suggestions on mount
+  // If we got server-rendered suggestions, just clear the loading flag.
+  // Otherwise fall back to the local mock generator (legacy path).
   useEffect(() => {
+    if (initialSuggestions && initialSuggestions.length > 0) {
+      setIsLoading(false)
+      return
+    }
     const timer = setTimeout(() => {
       setSuggestions(generateSuggestions())
       setIsLoading(false)
     }, 1200)
     return () => clearTimeout(timer)
-  }, [])
+  }, [initialSuggestions])
 
   const handleReset = useCallback(() => {
     setIsLoading(true)
@@ -41,10 +54,12 @@ export default function CampusAgentClient({
     setActiveTab('suggestions')
 
     setTimeout(() => {
-      setSuggestions(generateSuggestions())
+      // On reset, fall back to the local generator. (Real-data refresh
+      // would re-call the server action — wire that in when ready.)
+      setSuggestions(initialSuggestions ?? generateSuggestions())
       setIsLoading(false)
     }, 1200)
-  }, [])
+  }, [initialSuggestions])
 
   const handleAddToCalendar = useCallback((eventId: string) => {
     setAddedEventIds((prev) => new Set([...prev, eventId]))
