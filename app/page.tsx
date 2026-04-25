@@ -43,15 +43,22 @@ export default async function Page({ searchParams }: PageProps) {
   }
 
   // Fetch user's existing Google Calendar events on the server (we have the
-  // accessToken here). Fall back to mock if the API call fails.
-  let events = mockCalendarEvents
+  // accessToken here). Fall back to empty array (no mocks) if the API call
+  // fails so users can clearly see when their real calendar is empty vs broken.
+  let events: typeof mockCalendarEvents = []
   if (session.accessToken) {
     try {
       const real = await fetchGoogleCalendarEvents(session.accessToken)
       events = real
+      console.log(`[Nudge] Loaded ${real.length} events from Google Calendar for ${session.user.email}`)
     } catch (err) {
-      console.error("[Nudge] Calendar fetch failed, using mock data:", err)
+      console.error("[Nudge] Calendar fetch failed:", err)
+      // Leave events empty so the calendar reads as empty (real state) rather
+      // than misleading the user with mock data.
+      events = []
     }
+  } else {
+    console.warn("[Nudge] No accessToken on session — cannot fetch Google Calendar")
   }
 
   // Initial suggestions: local fallback. The client will immediately
