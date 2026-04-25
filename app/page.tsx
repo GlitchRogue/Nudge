@@ -1,35 +1,35 @@
-import { redirect } from "next/navigation"
-import { auth } from "@/auth"
-import { fetchGoogleCalendarEvents } from "@/lib/google-calendar"
-import { calendarEvents as mockCalendarEvents } from "@/lib/mockData"
-import CampusAgentClient from "./campus-agent-client"
+"use client"
 
-export default async function Page() {
-  const session = await auth()
+import { useState } from 'react'
+import { AppHeader } from '@/components/AppHeader'
+import { BottomNav, type Tab } from '@/components/BottomNav'
+import { HomeScreen } from '@/components/screens/HomeScreen'
+import { WeekScreen } from '@/components/screens/WeekScreen'
+import { AskScreen } from '@/components/screens/AskScreen'
+import { SettingsScreen } from '@/components/screens/SettingsScreen'
 
-  // Not signed in → bounce to login
-  if (!session?.user) {
-    redirect("/login")
-  }
+const EYEBROWS: Record<Tab, string> = {
+  home:     'THURSDAY · FREE 12—2PM',
+  week:     'WEEKLY LINEUP',
+  ask:      'ASK NUDGE',
+  settings: 'PROFILE & PREFERENCES',
+}
 
-  // Signed in: try to fetch real Google Calendar events.
-  // If the API call fails (token issue, scope missing, network), fall back to mocks
-  // so the demo never breaks.
-  let events = mockCalendarEvents
-  if (session.accessToken) {
-    try {
-      const real = await fetchGoogleCalendarEvents(session.accessToken)
-      if (real.length > 0) events = real
-    } catch (err) {
-      console.error("[Nudge] Calendar fetch failed, using mock data:", err)
-    }
-  }
+export default function Page() {
+  const [tab, setTab] = useState<Tab>('home')
 
   return (
-    <CampusAgentClient
-      calendarEvents={events}
-      userName={session.user.name ?? undefined}
-      userEmail={session.user.email ?? undefined}
-    />
+    <div className="min-h-screen bg-app-surface flex justify-center">
+      <div className="w-full max-w-md min-h-screen flex flex-col bg-app-bg relative">
+        <AppHeader eyebrow={EYEBROWS[tab]} />
+        <main className="flex-1 px-5 pb-24">
+          {tab === 'home'     && <HomeScreen />}
+          {tab === 'week'     && <WeekScreen />}
+          {tab === 'ask'      && <AskScreen />}
+          {tab === 'settings' && <SettingsScreen />}
+        </main>
+        <BottomNav active={tab} onChange={setTab} />
+      </div>
+    </div>
   )
 }

@@ -5,7 +5,7 @@ import {
   EventSuggestion,
   AvailableEvent,
   CalendarEvent,
-} from './mockData'
+} from './mock'
 import { areIntervalsOverlapping } from 'date-fns'
 
 interface ScoredEvent {

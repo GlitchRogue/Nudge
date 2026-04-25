@@ -686,12 +686,10 @@ export function formatEventDateShort(date: Date): string {
 }
 
 // Get events for a specific day
-export function getEventsForDay(events: CalendarEvent[], dayOffset: number): CalendarEvent[] {
+// In your lib/mock.ts, replace getEventsForDay with this generic version:
+export function getEventsForDay<T extends { startTime: Date }>(events: T[], dayOffset: number): T[] {
   const targetDate = addDays(weekStart, dayOffset)
-  return events.filter(event => {
-    const eventDate = new Date(event.startTime)
-    return eventDate.toDateString() === targetDate.toDateString()
-  })
+  return events.filter(event => event.startTime.toDateString() === targetDate.toDateString())
 }
 
 // Source badge colors
