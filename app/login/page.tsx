@@ -1,6 +1,6 @@
+import Link from "next/link"
 import { redirect } from "next/navigation"
 import { auth, signIn } from "@/auth"
-import { Sparkles } from "lucide-react"
 
 export default async function LoginPage() {
   // If they're already signed in, send them to the app
@@ -10,21 +10,35 @@ export default async function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md space-y-8 rounded-2xl border border-border bg-card p-10 shadow-lg">
+    <div className="flex min-h-screen items-center justify-center bg-app-surface p-4">
+      <div className="w-full max-w-sm space-y-8 rounded-3xl border border-app-border bg-app-bg p-8 shadow-sm">
         {/* Brand */}
-        <div className="flex flex-col items-center space-y-3 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-600">
-            <Sparkles className="h-7 w-7 text-white" />
+        <div className="flex flex-col items-center space-y-4 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand">
+            <svg
+              className="h-8 w-8 text-white"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">Nudge</h1>
-          <p className="text-sm text-muted-foreground">
-            Your AI scheduling agent. Find events that fit your life.
-          </p>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-app-text">Nudge</h1>
+            <p className="mt-1 text-sm text-app-subtle">
+              Your AI scheduling assistant
+            </p>
+          </div>
         </div>
 
         {/* Sign-in */}
-        <div className="space-y-4">
+        <div className="space-y-3">
           <form
             action={async () => {
               "use server"
@@ -33,7 +47,7 @@ export default async function LoginPage() {
           >
             <button
               type="submit"
-              className="flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-white px-4 py-3 font-medium text-gray-800 transition hover:bg-gray-50"
+              className="flex w-full items-center justify-center gap-3 rounded-xl border border-app-border bg-white px-4 py-3 text-sm font-medium text-gray-800 transition hover:bg-gray-50 dark:bg-app-card dark:text-app-text dark:hover:bg-app-muted"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24">
                 <path
@@ -53,13 +67,54 @@ export default async function LoginPage() {
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                 />
               </svg>
-              Sign in with Google
+              Continue with Google
             </button>
           </form>
-          <p className="text-center text-xs text-muted-foreground">
-            We&apos;ll read your calendar so the agent can find events that fit your free time.
+          
+          <p className="text-center text-xs text-app-subtle">
+            We&apos;ll read your calendar to find events that fit your schedule.
           </p>
         </div>
+
+        {/* Divider */}
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-app-border" />
+          </div>
+          <div className="relative flex justify-center text-xs">
+            <span className="bg-app-bg px-3 text-app-subtle">or</span>
+          </div>
+        </div>
+
+        {/* Demo Button */}
+        <Link
+          href="/?demo=1"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 py-3 text-sm font-medium text-white transition hover:bg-brand/90"
+        >
+          <svg
+            className="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+            />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          Try Demo
+        </Link>
+
+        <p className="text-center text-[11px] text-app-subtle">
+          Demo mode uses sample data to showcase the app
+        </p>
       </div>
     </div>
   )
