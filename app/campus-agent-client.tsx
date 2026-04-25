@@ -57,20 +57,26 @@ export default function CampusAgentClient({
 
     async function loadFromBackend() {
       try {
-        // Make sure we have a backend session. If /user/me 401s, fall back to demo.
+        // Try /events first — if we already have a session it just works.
+        // If we get a 401, mint a demo session and retry once.
+        let ranked
         try {
-          await apiAuth.me()
-        } catch {
+          ranked = await apiEvents.list()
+          console.log('[Nudge] backend /events OK, count:', ranked.length)
+        } catch (err) {
+          console.log('[Nudge] /events failed, trying demo session:', err)
           await apiAuth.demo()
+          ranked = await apiEvents.list()
+          console.log('[Nudge] backend /events after demo, count:', ranked.length)
         }
-        const ranked = await apiEvents.list()
         if (cancelled) return
         const mapped = ranked.map(rankedToSuggestion)
+        console.log('[Nudge] mapped suggestions:', mapped.length)
         if (mapped.length > 0) {
           setSuggestions(mapped)
         }
       } catch (err) {
-        console.warn('[Nudge] Backend fetch failed, keeping fallback:', err)
+        console.error('[Nudge] Backend fetch failed, keeping fallback:', err)
       } finally {
         if (!cancelled) setIsLoading(false)
       }
