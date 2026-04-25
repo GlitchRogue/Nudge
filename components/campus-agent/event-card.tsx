@@ -97,9 +97,20 @@ export function EventCard({
             event.title
           )}
         </h3>
-        <p className="mb-2.5 text-[12.5px] leading-snug text-app-muted">
+        <p className="mb-2 text-[12.5px] leading-snug text-app-muted">
           {event.description}
         </p>
+        {event.url && (
+          <a
+            href={event.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mb-2.5 inline-flex items-center gap-1 text-[11.5px] font-medium text-brand underline-offset-2 hover:underline"
+          >
+            View on {event.source}
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        )}
         
         {/* Meta row */}
         <div className="mb-2.5 flex flex-wrap items-center gap-2">

@@ -10,6 +10,7 @@ interface WeekCalendarProps {
   events: CalendarEvent[]
   suggestions: EventSuggestion[]
   addedEventIds: Set<string>
+  onAddToCalendar?: (eventId: string) => void
 }
 
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 7) // 7 AM to 8 PM
@@ -18,7 +19,7 @@ const DAYS = Array.from({ length: 7 }, (_, i) => i) // Sun to Sat
 // Use a fixed reference date for SSR to avoid hydration mismatches
 const FIXED_REFERENCE_DATE = new Date('2026-04-20T12:00:00')
 
-export function WeekCalendar({ events, suggestions, addedEventIds }: WeekCalendarProps) {
+export function WeekCalendar({ events, suggestions, addedEventIds, onAddToCalendar }: WeekCalendarProps) {
   // Start with fixed date for SSR, then update to real date on client
   const [currentDate, setCurrentDate] = useState(FIXED_REFERENCE_DATE)
   const [isClient, setIsClient] = useState(false)
@@ -208,11 +209,32 @@ export function WeekCalendar({ events, suggestions, addedEventIds }: WeekCalenda
                   return (
                     <div
                       key={suggestion.event.id}
-                      className="absolute left-0.5 right-0.5 overflow-hidden rounded border-2 border-dashed border-success/60 bg-success/5 px-1 py-0.5 text-xs"
+                      className="group absolute left-0.5 right-0.5 overflow-hidden rounded border-2 border-dashed border-success/60 bg-success/5 px-1 py-0.5 text-xs"
                       style={style}
                     >
                       <div className="truncate font-medium text-success">{suggestion.event.title}</div>
                       <div className="truncate text-success/70">{suggestion.event.location}</div>
+                      {onAddToCalendar && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); onAddToCalendar(suggestion.event.id) }}
+                          className="absolute right-0.5 top-0.5 rounded bg-success px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white shadow-sm transition hover:opacity-90 active:scale-95"
+                          aria-label="Add to calendar"
+                        >
+                          + Add
+                        </button>
+                      )}
+                      {suggestion.event.url && (
+                        <a
+                          href={suggestion.event.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="absolute bottom-0.5 right-0.5 rounded bg-white/80 px-1 py-0.5 text-[9px] font-medium text-success underline-offset-2 hover:underline"
+                        >
+                          link ↗
+                        </a>
+                      )}
                     </div>
                   )
                 })}

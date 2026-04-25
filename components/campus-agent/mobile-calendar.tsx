@@ -18,6 +18,7 @@ interface MobileCalendarProps {
   events: CalendarEvent[]
   suggestions: EventSuggestion[]
   addedEventIds: Set<string>
+  onAddToCalendar?: (eventId: string) => void
 }
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -25,7 +26,7 @@ const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 // Fixed reference date for SSR
 const FIXED_REFERENCE_DATE = new Date('2026-04-20T12:00:00')
 
-export function MobileCalendar({ events, suggestions, addedEventIds }: MobileCalendarProps) {
+export function MobileCalendar({ events, suggestions, addedEventIds, onAddToCalendar }: MobileCalendarProps) {
   const [selectedDay, setSelectedDay] = useState(new Date().getDay())
   const [isClient, setIsClient] = useState(false)
   const [weekOffset, setWeekOffset] = useState(0)
@@ -172,6 +173,7 @@ export function MobileCalendar({ events, suggestions, addedEventIds }: MobileCal
               <SuggestionListItem 
                 key={s.event.id} 
                 suggestion={s}
+                onAdd={onAddToCalendar}
               />
             ))}
           </div>
@@ -222,7 +224,7 @@ function EventListItem({ event }: { event: CalendarEvent }) {
   )
 }
 
-function SuggestionListItem({ suggestion }: { suggestion: EventSuggestion }) {
+function SuggestionListItem({ suggestion, onAdd }: { suggestion: EventSuggestion; onAdd?: (id: string) => void }) {
   const { event, matchScore } = suggestion
 
   return (
@@ -237,16 +239,28 @@ function SuggestionListItem({ suggestion }: { suggestion: EventSuggestion }) {
             {matchScore}% match
           </span>
         </div>
-        <h3 className="mb-1 mt-2 text-[15.5px] font-medium leading-snug text-app-text">
-          {event.title}
-        </h3>
-        <div className="flex items-center justify-between">
+        {event.url ? (
+          <a
+            href={event.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mb-1 mt-2 block text-[15.5px] font-medium leading-snug text-app-text underline-offset-2 hover:underline"
+          >
+            {event.title} ↗
+          </a>
+        ) : (
+          <h3 className="mb-1 mt-2 text-[15.5px] font-medium leading-snug text-app-text">
+            {event.title}
+          </h3>
+        )}
+        <div className="flex items-center justify-between gap-2">
           <p className="text-[12.5px] text-app-muted">
             {format(event.startTime, 'h:mm a')} · {event.location}
           </p>
-          <button 
+          <button
             type="button"
-            className="rounded-lg bg-brand px-3 py-1.5 text-[11px] font-medium text-white"
+            onClick={() => onAdd?.(event.id)}
+            className="shrink-0 rounded-lg bg-brand px-3 py-1.5 text-[11px] font-medium text-white transition hover:opacity-90 active:scale-95"
           >
             Add
           </button>

@@ -196,6 +196,7 @@ export default function CampusAgentClient({
                   events={calendarEvents}
                   suggestions={suggestions}
                   addedEventIds={addedEventIds}
+                  onAddToCalendar={handleAddToCalendar}
                 />
               </div>
             </div>
@@ -210,6 +211,7 @@ export default function CampusAgentClient({
                       events={calendarEvents}
                       suggestions={suggestions}
                       addedEventIds={addedEventIds}
+                      onAddToCalendar={handleAddToCalendar}
                     />
                   </div>
                 )}
