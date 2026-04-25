@@ -10,13 +10,17 @@ interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
   content: string
+  suggestedIds?: string[]
 }
 
 interface ChatInterfaceProps {
   onSendMessage?: (message: string) => void
+  onAddEvent?: (eventId: string) => void
+  addedEventIds?: Set<string>
+  suggestionTitleMap?: Record<string, string>
 }
 
-export function ChatInterface({ onSendMessage }: ChatInterfaceProps) {
+export function ChatInterface({ onSendMessage, onAddEvent, addedEventIds, suggestionTitleMap }: ChatInterfaceProps) {
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
@@ -53,13 +57,18 @@ export function ChatInterface({ onSendMessage }: ChatInterfaceProps) {
           messages: next.map(m => ({ role: m.role, content: m.content })),
         }),
       })
-      const data = (await r.json()) as { reply?: string }
+      const data = (await r.json()) as { reply?: string; suggested_event_ids?: string[] }
       const replyText =
         data.reply?.trim() ||
         "I'm having trouble responding right now. Try rephrasing?"
       setMessages(prev => [
         ...prev,
-        { id: `a-${Date.now()}`, role: 'assistant', content: replyText },
+        {
+          id: `a-${Date.now()}`,
+          role: 'assistant',
+          content: replyText,
+          suggestedIds: data.suggested_event_ids ?? [],
+        },
       ])
     } catch (err) {
       console.warn('[chat] fetch failed', err)
@@ -94,16 +103,41 @@ export function ChatInterface({ onSendMessage }: ChatInterfaceProps) {
           </div>
         ) : (
           messages.map(m => (
-            <div
-              key={m.id}
-              className={cn(
-                'max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2.5 text-[13px] leading-snug',
-                m.role === 'assistant'
-                  ? 'self-start rounded-bl-md border border-app-border bg-app-card text-app-text'
-                  : 'self-end rounded-br-md bg-brand text-white',
+            <div key={m.id} className={cn('flex flex-col gap-1.5', m.role === 'assistant' ? 'items-start' : 'items-end')}>
+              <div
+                className={cn(
+                  'max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2.5 text-[13px] leading-snug',
+                  m.role === 'assistant'
+                    ? 'rounded-bl-md border border-app-border bg-app-card text-app-text'
+                    : 'rounded-br-md bg-brand text-white',
+                )}
+              >
+                {m.content}
+              </div>
+              {m.role === 'assistant' && m.suggestedIds && m.suggestedIds.length > 0 && onAddEvent && (
+                <div className="flex max-w-[85%] flex-wrap gap-1.5">
+                  {m.suggestedIds.map((id) => {
+                    const isAdded = addedEventIds?.has(id) ?? false
+                    const title = suggestionTitleMap?.[id]
+                    if (!title) return null
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => onAddEvent(id)}
+                        className={cn(
+                          'rounded-full border px-2.5 py-1 text-[11.5px] font-medium transition active:scale-95',
+                          isAdded
+                            ? 'border-brand bg-white text-brand'
+                            : 'border-brand bg-brand text-white hover:opacity-90'
+                        )}
+                      >
+                        {isAdded ? '✓ Added: ' : '+ Add: '}{title.length > 30 ? title.slice(0, 30) + '…' : title}
+                      </button>
+                    )
+                  })}
+                </div>
               )}
-            >
-              {m.content}
             </div>
           ))
         )}

@@ -245,12 +245,28 @@ async def chat(
         else:
             reply = "No upcoming events match your filters yet. Try widening your interests in the profile."
 
-    # Surface up to 3 event IDs the assistant likely referenced (by title match)
+    # Surface up to 4 event IDs the assistant likely referenced.
+    # Match by full title OR by significant title words (>=4 chars) appearing in reply.
+    reply_lower = reply.lower()
     referenced = []
+    seen = set()
     for ev in top_events:
-        if ev.title.lower() in reply.lower():
+        if ev.id in seen:
+            continue
+        title_lower = ev.title.lower()
+        if title_lower in reply_lower:
             referenced.append(ev.id)
-        if len(referenced) >= 3:
+            seen.add(ev.id)
+            continue
+        # Fuzzy: check if 2+ significant words (>=5 chars) from title appear in reply
+        words = [w for w in title_lower.split() if len(w) >= 5]
+        if words and sum(1 for w in words if w in reply_lower) >= 2:
+            referenced.append(ev.id)
+            seen.add(ev.id)
+        if len(referenced) >= 4:
             break
+    # If LLM didn't name anything specific, still surface the top 2 as fallback chips
+    if not referenced and top_events:
+        referenced = [ev.id for ev in top_events[:2]]
 
     return ChatResponse(reply=reply, suggested_event_ids=referenced)

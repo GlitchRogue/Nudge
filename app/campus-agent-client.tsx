@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Calendar, MessageSquare, Sparkles } from 'lucide-react'
 import { TopNav } from '@/components/campus-agent/top-nav'
 import { SuggestionsPanel } from '@/components/campus-agent/suggestions-panel'
@@ -44,6 +44,11 @@ export default function CampusAgentClient({
   )
   const [addedEventIds, setAddedEventIds] = useState<Set<string>>(new Set())
   const [jumpToDate, setJumpToDate] = useState<Date | null>(null)
+
+  const suggestionTitleMap = useMemo(
+    () => Object.fromEntries(suggestions.map((s) => [s.event.id, s.event.title])),
+    [suggestions],
+  )
 
   // On mount, hit the backend for real ranked events. The backend session
   // cookie is acquired by signing in (real Google or /auth/demo) — if there's
@@ -115,34 +120,30 @@ export default function CampusAgentClient({
 
   const handleAddToCalendar = useCallback(
     (eventId: string) => {
+      const wasAdded = addedEventIds.has(eventId)
+      const sug = suggestions.find((s) => s.event.id === eventId)
+      console.log('[Nudge] handleAddToCalendar', { eventId, wasAdded, found: !!sug, startTime: sug?.event.startTime })
+
       setAddedEventIds((prev) => {
         const next = new Set(prev)
-        const wasAdded = next.has(eventId)
-        if (wasAdded) {
-          next.delete(eventId)
-        } else {
-          next.add(eventId)
-          // Jump calendar to the week of the newly added event
-          const sug = suggestions.find((s) => s.event.id === eventId)
-          if (sug) {
-            console.log('[Nudge] adding event, jumping calendar to', sug.event.startTime)
-            // New Date object every time so useEffect re-fires even on same date
-            setJumpToDate(new Date(sug.event.startTime.getTime()))
-            // On mobile, jump to calendar tab so user immediately sees it
-            setMobileTab('calendar')
-          }
-        }
-        if (backendEnabled) {
-          apiActions
-            .record(eventId, wasAdded ? 'dismiss' : 'add_to_calendar')
-            .catch((err) =>
-              console.warn('[Nudge] action failed:', err),
-            )
-        }
+        if (wasAdded) next.delete(eventId)
+        else next.add(eventId)
         return next
       })
+
+      // Side-effects OUTSIDE the state updater (which must be pure)
+      if (!wasAdded && sug) {
+        // New Date object every time so useEffect re-fires even on same date
+        setJumpToDate(new Date(sug.event.startTime.getTime() + Math.random()))
+        setMobileTab('calendar')
+      }
+      if (backendEnabled) {
+        apiActions
+          .record(eventId, wasAdded ? 'dismiss' : 'add_to_calendar')
+          .catch((err) => console.warn('[Nudge] action failed:', err))
+      }
     },
-    [backendEnabled, suggestions],
+    [backendEnabled, suggestions, addedEventIds],
   )
 
   const handleTellMeMore = useCallback((eventId: string) => {
@@ -162,9 +163,9 @@ export default function CampusAgentClient({
   )
 
   return (
-    <div className="flex min-h-screen flex-col bg-app-surface">
+    <div className="flex h-screen flex-col overflow-hidden bg-app-surface">
       {/* Centered container like frontend design */}
-      <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-app-bg lg:max-w-none">
+      <div className="mx-auto flex h-screen w-full max-w-md flex-col overflow-hidden bg-app-bg lg:max-w-none">
         <TopNav
           activeTab={activeTab}
           onTabChange={setActiveTab}
@@ -196,7 +197,11 @@ export default function CampusAgentClient({
 
                 {/* Chat - takes remaining space */}
                 <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-4">
-                  <ChatInterface />
+                  <ChatInterface
+                    onAddEvent={handleAddToCalendar}
+                    addedEventIds={addedEventIds}
+                    suggestionTitleMap={suggestionTitleMap}
+                  />
                 </div>
               </div>
 
@@ -229,7 +234,11 @@ export default function CampusAgentClient({
                 )}
                 {mobileTab === 'chat' && (
                   <div className="flex h-full flex-col overflow-hidden p-3">
-                    <ChatInterface />
+                    <ChatInterface
+                      onAddEvent={handleAddToCalendar}
+                      addedEventIds={addedEventIds}
+                      suggestionTitleMap={suggestionTitleMap}
+                    />
                   </div>
                 )}
                 {mobileTab === 'events' && (
