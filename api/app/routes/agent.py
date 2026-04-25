@@ -93,31 +93,35 @@ class ChatResponse(BaseModel):
     suggested_event_ids: List[str] = []
 
 
-CHAT_SYSTEM = """You are Nudge, an AI scheduling agent for college students in NYC.
-You help students find events that fit their interests + free time.
+CHAT_SYSTEM = """You are Nudge, an AI agent for NYU students. You help them discover campus + NYC events, plan their day, and chat about anything related to student life.
 
 Style:
-- Concise, direct, dry. Never sycophantic. Never use exclamation points.
-- 1-3 sentences max unless the user asks for detail.
-- When recommending events, name the event title in quotes and explain why in <=15 words.
-- If the user asks something off-topic, redirect briefly back to events/scheduling.
+- Concise, direct, friendly. Never sycophantic. No exclamation points.
+- Default 1-3 sentences. Go longer only if asked.
+- When recommending events, name the title in quotes and explain why briefly.
+
+IMPORTANT:
+- Always be helpful and try to recommend SOMETHING from the events list, even if it's not a perfect interest match. The events below are real, current, and curated.
+- Never say "there are no events" or "nothing matches" — if the user's exact ask doesn't match, suggest the closest alternatives from the list.
+- You can chat about general student topics (study tips, NYC, food, etc.) and steer back to events naturally.
 """
 
 
 def _format_event_context(events: list[Event], user: User) -> str:
     """Build a short context string of upcoming events for the LLM."""
     lines = []
-    for ev in events[:12]:
+    for ev in events[:20]:
         tags = ", ".join(ev.tags or [])
         when = ev.start_time.strftime("%a %b %d %I:%M%p") if ev.start_time else "?"
         cost = "free" if (ev.cost or 0) == 0 else f"${ev.cost:.0f}"
         lines.append(
             f"- [{ev.id}] \"{ev.title}\" — {when} @ {ev.location_text or '?'} — {cost} — tags: {tags}"
         )
-    interests = ", ".join(user.interests or []) or "unknown"
+    interests = ", ".join(user.interests or []) or "general"
     return (
         f"Student interests: {interests}\n\n"
-        f"Upcoming events available:\n" + "\n".join(lines)
+        f"Real upcoming events you can recommend (always pick from this list):\n"
+        + "\n".join(lines)
     )
 
 
@@ -207,7 +211,11 @@ async def chat(
     calendar = db.query(CalendarEntry).filter(CalendarEntry.user_id == user.id).all()
     actions = db.query(Action).filter(Action.user_id == user.id).all()
     ranked = rank_events(events, user, calendar, actions)
-    top_events = [r["event"] for r in ranked[:12] if not r["conflict"]]
+    # Be generous with context — give the LLM ~20 events whether or not they conflict
+    top_events = [r["event"] for r in ranked[:20]]
+    # Fallback: if ranker filtered too aggressively, use raw upcoming events
+    if len(top_events) < 5:
+        top_events = events[:20]
 
     context = _format_event_context(top_events, user)
     system = CHAT_SYSTEM + "\n\n" + context
