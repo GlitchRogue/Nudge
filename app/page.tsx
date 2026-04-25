@@ -1,12 +1,40 @@
 import { redirect } from "next/navigation"
 import { auth } from "@/auth"
 import { fetchGoogleCalendarEvents } from "@/lib/google-calendar"
-import { calendarEvents as mockCalendarEvents } from "@/lib/mockData"
+import { calendarEvents as mockCalendarEvents, userProfile as mockUserProfile } from "@/lib/mockData"
 import { getProfile } from "@/lib/profile"
 import { searchEvents } from "@/lib/event-search"
 import CampusAgentClient from "./campus-agent-client"
 
-export default async function Page() {
+interface PageProps {
+  searchParams: Promise<{ demo?: string }>
+}
+
+export default async function Page({ searchParams }: PageProps) {
+  const params = await searchParams
+  const isDemo = params.demo === "1"
+
+  // Demo mode: skip auth and use mock data
+  if (isDemo) {
+    // Use mock data for demo mode
+    let suggestions: Awaited<ReturnType<typeof searchEvents>> = []
+    try {
+      suggestions = await searchEvents(mockUserProfile, mockCalendarEvents)
+    } catch (err) {
+      console.error("[Nudge] Demo suggestion generation failed:", err)
+    }
+
+    return (
+      <CampusAgentClient
+        calendarEvents={mockCalendarEvents}
+        initialSuggestions={suggestions}
+        userName={mockUserProfile.name}
+        userEmail="demo@stanford.edu"
+        profileInterests={mockUserProfile.interests}
+      />
+    )
+  }
+
   const session = await auth()
 
   // Not signed in → bounce to login
