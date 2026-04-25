@@ -149,6 +149,45 @@ async def _call_anthropic_chat(
         return data["content"][0]["text"].strip()
 
 
+async def _call_gemini_chat(
+    system: str, messages: List[ChatMessage]
+) -> str:
+    """Google Gemini chat completion via the v1beta REST API.
+    Free tier on aistudio.google.com is sufficient for the demo.
+    """
+    key = settings.gemini_api_key or os.getenv("GEMINI_API_KEY")
+    if not key:
+        return ""
+    # Gemini's API uses 'user'/'model' role names; convert assistant -> model.
+    contents = []
+    for m in messages:
+        role = "model" if m.role == "assistant" else "user"
+        contents.append({"role": role, "parts": [{"text": m.content}]})
+    url = (
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        f"gemini-2.0-flash:generateContent?key={key}"
+    )
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        resp = await client.post(
+            url,
+            headers={"Content-Type": "application/json"},
+            json={
+                "systemInstruction": {"parts": [{"text": system}]},
+                "contents": contents,
+                "generationConfig": {
+                    "maxOutputTokens": 400,
+                    "temperature": 0.6,
+                },
+            },
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        try:
+            return data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        except (KeyError, IndexError):
+            return ""
+
+
 @router.post("/chat", response_model=ChatResponse)
 async def chat(
     body: ChatRequest,
@@ -170,11 +209,18 @@ async def chat(
     context = _format_event_context(top_events, user)
     system = CHAT_SYSTEM + "\n\n" + context
 
-    try:
-        reply = await _call_anthropic_chat(system, body.messages)
-    except Exception as e:
-        print(f"[chat] anthropic call failed: {e}")
-        reply = ""
+    # Try LLMs in priority order: Gemini -> Anthropic -> deterministic fallback.
+    reply = ""
+    for fn, name in (
+        (_call_gemini_chat, "gemini"),
+        (_call_anthropic_chat, "anthropic"),
+    ):
+        try:
+            reply = await fn(system, body.messages)
+            if reply:
+                break
+        except Exception as e:
+            print(f"[chat] {name} call failed: {e}")
 
     if not reply:
         # Fallback: deterministic top-pick recommendation

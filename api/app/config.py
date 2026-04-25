@@ -20,9 +20,10 @@ class Settings(BaseSettings):
     google_client_secret: str = ""
     google_redirect_uri: str = "http://localhost:8000/auth/callback"
 
-    # LLM keys (either/both; auto-detect)
+    # LLM keys (auto-detect; priority: gemini > anthropic > openai > template fallback)
     anthropic_api_key: str = ""
     openai_api_key: str = ""
+    gemini_api_key: str = ""
 
     # Eventbrite (optional, for live adapter)
     eventbrite_token: str = ""
