@@ -1,13 +1,17 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { Calendar, MessageSquare, Sparkles } from 'lucide-react'
 import { TopNav } from '@/components/campus-agent/top-nav'
 import { SuggestionsPanel } from '@/components/campus-agent/suggestions-panel'
 import { ChatInterface } from '@/components/campus-agent/chat-interface'
 import { WeekCalendar } from '@/components/campus-agent/week-calendar'
 import { GroupTab } from '@/components/campus-agent/group-tab'
 import { generateSuggestions } from '@/lib/agent'
+import { cn } from '@/lib/utils'
 import type { CalendarEvent, EventSuggestion } from '@/lib/mockData'
+
+type MobileTab = 'calendar' | 'chat' | 'events'
 
 interface CampusAgentClientProps {
   calendarEvents: CalendarEvent[]
@@ -25,6 +29,7 @@ export default function CampusAgentClient({
   profileInterests,
 }: CampusAgentClientProps) {
   const [activeTab, setActiveTab] = useState<'suggestions' | 'group'>('suggestions')
+  const [mobileTab, setMobileTab] = useState<MobileTab>('chat') // Default to chat
   const [suggestions, setSuggestions] = useState<EventSuggestion[]>(
     initialSuggestions ?? [],
   )
@@ -87,39 +92,117 @@ export default function CampusAgentClient({
       />
 
       {activeTab === 'suggestions' ? (
-        <div className="flex flex-1 flex-col overflow-hidden lg:flex-row">
-          {/* Left Panel - Full width on mobile, 60% on desktop */}
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:w-[60%] lg:flex-none lg:border-r lg:border-border">
-            {/* Suggestions - scrollable section */}
-            <div
-              className="flex-shrink-0 overflow-auto border-b border-border p-3 sm:p-4"
-              style={{ maxHeight: '40vh' }}
-            >
-              <SuggestionsPanel
+        <>
+          {/* Desktop Layout */}
+          <div className="hidden flex-1 overflow-hidden lg:flex">
+            {/* Left Panel - 60% */}
+            <div className="flex w-[60%] flex-col overflow-hidden border-r border-border">
+              {/* Suggestions - scrollable section */}
+              <div
+                className="flex-shrink-0 overflow-auto border-b border-border p-4"
+                style={{ maxHeight: '45%' }}
+              >
+                <SuggestionsPanel
+                  suggestions={suggestions}
+                  isLoading={isLoading}
+                  addedEventIds={addedEventIds}
+                  onAddToCalendar={handleAddToCalendar}
+                  onTellMeMore={handleTellMeMore}
+                  onApproveRearrangement={handleApproveRearrangement}
+                />
+              </div>
+
+              {/* Chat - takes remaining space */}
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-4">
+                <ChatInterface />
+              </div>
+            </div>
+
+            {/* Right Panel - Calendar 40% */}
+            <div className="w-[40%] overflow-hidden p-4">
+              <WeekCalendar
+                events={calendarEvents}
                 suggestions={suggestions}
-                isLoading={isLoading}
                 addedEventIds={addedEventIds}
-                onAddToCalendar={handleAddToCalendar}
-                onTellMeMore={handleTellMeMore}
-                onApproveRearrangement={handleApproveRearrangement}
               />
             </div>
+          </div>
 
-            {/* Chat - takes remaining space */}
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-3 sm:p-4">
-              <ChatInterface />
+          {/* Mobile Layout with Tab Navigation */}
+          <div className="flex flex-1 flex-col overflow-hidden lg:hidden">
+            {/* Mobile Tab Content */}
+            <div className="min-h-0 flex-1 overflow-hidden">
+              {mobileTab === 'calendar' && (
+                <div className="h-full overflow-auto p-3">
+                  <WeekCalendar
+                    events={calendarEvents}
+                    suggestions={suggestions}
+                    addedEventIds={addedEventIds}
+                  />
+                </div>
+              )}
+              {mobileTab === 'chat' && (
+                <div className="flex h-full flex-col overflow-hidden p-3">
+                  <ChatInterface />
+                </div>
+              )}
+              {mobileTab === 'events' && (
+                <div className="h-full overflow-auto p-3">
+                  <SuggestionsPanel
+                    suggestions={suggestions}
+                    isLoading={isLoading}
+                    addedEventIds={addedEventIds}
+                    onAddToCalendar={handleAddToCalendar}
+                    onTellMeMore={handleTellMeMore}
+                    onApproveRearrangement={handleApproveRearrangement}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Mobile Bottom Tab Bar */}
+            <div className="flex-shrink-0 border-t border-border bg-card">
+              <div className="flex">
+                <button
+                  onClick={() => setMobileTab('calendar')}
+                  className={cn(
+                    'flex flex-1 flex-col items-center gap-1 py-3 text-xs font-medium transition-colors',
+                    mobileTab === 'calendar'
+                      ? 'text-primary'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  <Calendar className={cn('h-5 w-5', mobileTab === 'calendar' && 'text-primary')} />
+                  Calendar
+                </button>
+                <button
+                  onClick={() => setMobileTab('chat')}
+                  className={cn(
+                    'flex flex-1 flex-col items-center gap-1 py-3 text-xs font-medium transition-colors',
+                    mobileTab === 'chat'
+                      ? 'text-primary'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  <MessageSquare className={cn('h-5 w-5', mobileTab === 'chat' && 'text-primary')} />
+                  Chat
+                </button>
+                <button
+                  onClick={() => setMobileTab('events')}
+                  className={cn(
+                    'flex flex-1 flex-col items-center gap-1 py-3 text-xs font-medium transition-colors',
+                    mobileTab === 'events'
+                      ? 'text-primary'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  <Sparkles className={cn('h-5 w-5', mobileTab === 'events' && 'text-primary')} />
+                  Events
+                </button>
+              </div>
             </div>
           </div>
-
-          {/* Right Panel - Calendar: Hidden on mobile, 40% on desktop */}
-          <div className="hidden overflow-hidden p-4 lg:block lg:w-[40%]">
-            <WeekCalendar
-              events={calendarEvents}
-              suggestions={suggestions}
-              addedEventIds={addedEventIds}
-            />
-          </div>
-        </div>
+        </>
       ) : (
         <div className="flex-1 overflow-auto">
           <GroupTab onBack={() => setActiveTab('suggestions')} />
