@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import { EventSuggestion, sourceBadgeColors, formatEventTime, formatEventDate } from '@/lib/mockData'
+import { EventSuggestion, sourceBadgeColors } from '@/lib/mockData'
+import { ClientTime } from '@/components/ui/client-time'
 
 interface EventCardProps {
   suggestion: EventSuggestion
@@ -37,7 +38,7 @@ export function EventCard({
       'transition-all duration-200 hover:shadow-md',
       isAdded && 'ring-2 ring-success/50'
     )}>
-      <CardContent className="p-4">
+      <CardContent className="p-3 sm:p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -60,7 +61,7 @@ export function EventCard({
               </span>
               <span className="flex items-center gap-1">
                 <Clock className="h-3.5 w-3.5" />
-                {formatEventDate(event.startTime)}, {formatEventTime(event.startTime)}
+                <ClientTime date={event.startTime} />
               </span>
             </div>
 
@@ -129,11 +130,11 @@ export function EventCard({
           </ul>
         )}
 
-        <div className="mt-4 flex gap-2">
+        <div className="mt-3 flex flex-col gap-2 sm:mt-4 sm:flex-row">
           <Button
             variant={isAdded ? 'secondary' : 'default'}
             size="sm"
-            className="flex-1"
+            className="flex-1 text-xs sm:text-sm"
             onClick={() => onAddToCalendar(event.id)}
             disabled={isAdded}
           >
@@ -149,7 +150,7 @@ export function EventCard({
               </>
             )}
           </Button>
-          <Button variant="outline" size="sm" onClick={() => onTellMeMore(event.id)}>
+          <Button variant="outline" size="sm" className="text-xs sm:text-sm" onClick={() => onTellMeMore(event.id)}>
             <MessageCircle className="mr-1.5 h-3.5 w-3.5" />
             Tell me more
           </Button>
