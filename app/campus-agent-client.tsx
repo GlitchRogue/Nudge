@@ -6,6 +6,7 @@ import { TopNav } from '@/components/campus-agent/top-nav'
 import { SuggestionsPanel } from '@/components/campus-agent/suggestions-panel'
 import { ChatInterface } from '@/components/campus-agent/chat-interface'
 import { WeekCalendar } from '@/components/campus-agent/week-calendar'
+import { MobileCalendar } from '@/components/campus-agent/mobile-calendar'
 import { GroupTab } from '@/components/campus-agent/group-tab'
 import { generateSuggestions } from '@/lib/agent'
 import { cn } from '@/lib/utils'
@@ -136,72 +137,28 @@ export default function CampusAgentClient({
   )
 
   return (
-    <div className="flex h-screen flex-col bg-background">
-      <TopNav
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        onReset={handleReset}
-        userName={userName}
-        userEmail={userEmail}
-      />
+    <div className="flex min-h-screen flex-col bg-app-surface">
+      {/* Centered container like frontend design */}
+      <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-app-bg lg:max-w-none">
+        <TopNav
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          onReset={handleReset}
+          userName={userName}
+          userEmail={userEmail}
+        />
 
-      {activeTab === 'suggestions' ? (
-        <>
-          {/* Desktop Layout */}
-          <div className="hidden flex-1 overflow-hidden lg:flex">
-            {/* Left Panel - 60% */}
-            <div className="flex w-[60%] flex-col overflow-hidden border-r border-border">
-              {/* Suggestions - scrollable section */}
-              <div
-                className="flex-shrink-0 overflow-auto border-b border-border p-4"
-                style={{ maxHeight: '45%' }}
-              >
-                <SuggestionsPanel
-                  suggestions={suggestions}
-                  isLoading={isLoading}
-                  addedEventIds={addedEventIds}
-                  onAddToCalendar={handleAddToCalendar}
-                  onTellMeMore={handleTellMeMore}
-                  onApproveRearrangement={handleApproveRearrangement}
-                />
-              </div>
-
-              {/* Chat - takes remaining space */}
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-4">
-                <ChatInterface />
-              </div>
-            </div>
-
-            {/* Right Panel - Calendar 40% */}
-            <div className="w-[40%] overflow-hidden p-4">
-              <WeekCalendar
-                events={calendarEvents}
-                suggestions={suggestions}
-                addedEventIds={addedEventIds}
-              />
-            </div>
-          </div>
-
-          {/* Mobile Layout with Tab Navigation */}
-          <div className="flex flex-1 flex-col overflow-hidden lg:hidden">
-            {/* Mobile Tab Content */}
-            <div className="min-h-0 flex-1 overflow-hidden">
-              {mobileTab === 'calendar' && (
-                <div className="h-full overflow-auto p-3">
-                  <WeekCalendar
-                    events={calendarEvents}
-                    suggestions={suggestions}
-                    addedEventIds={addedEventIds}
-                  />
-                </div>
-              )}
-              {mobileTab === 'chat' && (
-                <div className="flex h-full flex-col overflow-hidden p-3">
-                  <ChatInterface />
-                </div>
-              )}
-              {mobileTab === 'events' && (
-                <div className="h-full overflow-auto p-3">
+        {activeTab === 'suggestions' ? (
+          <>
+            {/* Desktop Layout */}
+            <div className="hidden flex-1 overflow-hidden lg:flex">
+              {/* Left Panel - 60% */}
+              <div className="flex w-[60%] flex-col overflow-hidden border-r border-border">
+                {/* Suggestions - scrollable section */}
+                <div
+                  className="flex-shrink-0 overflow-auto border-b border-border p-4"
+                  style={{ maxHeight: '45%' }}
+                >
                   <SuggestionsPanel
                     suggestions={suggestions}
                     isLoading={isLoading}
@@ -211,57 +168,104 @@ export default function CampusAgentClient({
                     onApproveRearrangement={handleApproveRearrangement}
                   />
                 </div>
-              )}
-            </div>
 
-            {/* Mobile Bottom Tab Bar */}
-            <div className="flex-shrink-0 border-t border-border bg-card">
-              <div className="flex">
-                <button
-                  onClick={() => setMobileTab('calendar')}
-                  className={cn(
-                    'flex flex-1 flex-col items-center gap-1 py-3 text-xs font-medium transition-colors',
-                    mobileTab === 'calendar'
-                      ? 'text-primary'
-                      : 'text-muted-foreground hover:text-foreground'
-                  )}
-                >
-                  <Calendar className={cn('h-5 w-5', mobileTab === 'calendar' && 'text-primary')} />
-                  Calendar
-                </button>
-                <button
-                  onClick={() => setMobileTab('chat')}
-                  className={cn(
-                    'flex flex-1 flex-col items-center gap-1 py-3 text-xs font-medium transition-colors',
-                    mobileTab === 'chat'
-                      ? 'text-primary'
-                      : 'text-muted-foreground hover:text-foreground'
-                  )}
-                >
-                  <MessageSquare className={cn('h-5 w-5', mobileTab === 'chat' && 'text-primary')} />
-                  Chat
-                </button>
-                <button
-                  onClick={() => setMobileTab('events')}
-                  className={cn(
-                    'flex flex-1 flex-col items-center gap-1 py-3 text-xs font-medium transition-colors',
-                    mobileTab === 'events'
-                      ? 'text-primary'
-                      : 'text-muted-foreground hover:text-foreground'
-                  )}
-                >
-                  <Sparkles className={cn('h-5 w-5', mobileTab === 'events' && 'text-primary')} />
-                  Events
-                </button>
+                {/* Chat - takes remaining space */}
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-4">
+                  <ChatInterface />
+                </div>
+              </div>
+
+              {/* Right Panel - Calendar 40% */}
+              <div className="w-[40%] overflow-hidden p-4">
+                <WeekCalendar
+                  events={calendarEvents}
+                  suggestions={suggestions}
+                  addedEventIds={addedEventIds}
+                />
               </div>
             </div>
+
+            {/* Mobile Layout with Tab Navigation */}
+            <div className="flex flex-1 flex-col overflow-hidden lg:hidden">
+              {/* Mobile Tab Content */}
+              <div className="min-h-0 flex-1 overflow-hidden">
+                {mobileTab === 'calendar' && (
+                  <div className="h-full overflow-hidden p-3">
+                    <MobileCalendar
+                      events={calendarEvents}
+                      suggestions={suggestions}
+                      addedEventIds={addedEventIds}
+                    />
+                  </div>
+                )}
+                {mobileTab === 'chat' && (
+                  <div className="flex h-full flex-col overflow-hidden p-3">
+                    <ChatInterface />
+                  </div>
+                )}
+                {mobileTab === 'events' && (
+                  <div className="h-full overflow-auto p-3">
+                    <SuggestionsPanel
+                      suggestions={suggestions}
+                      isLoading={isLoading}
+                      addedEventIds={addedEventIds}
+                      onAddToCalendar={handleAddToCalendar}
+                      onTellMeMore={handleTellMeMore}
+                      onApproveRearrangement={handleApproveRearrangement}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Mobile Bottom Tab Bar */}
+              <nav className="flex-shrink-0 border-t border-app-border bg-app-bg pt-2 pb-3.5">
+                <div className="grid grid-cols-3">
+                  <button
+                    onClick={() => setMobileTab('calendar')}
+                    className={cn(
+                      'flex flex-col items-center gap-1 py-2 text-[11px] font-medium transition-colors',
+                      mobileTab === 'calendar'
+                        ? 'text-brand'
+                        : 'text-app-subtle'
+                    )}
+                  >
+                    <Calendar className="h-5 w-5" />
+                    Week
+                  </button>
+                  <button
+                    onClick={() => setMobileTab('chat')}
+                    className={cn(
+                      'flex flex-col items-center gap-1 py-2 text-[11px] font-medium transition-colors',
+                      mobileTab === 'chat'
+                        ? 'text-brand'
+                        : 'text-app-subtle'
+                    )}
+                  >
+                    <MessageSquare className="h-5 w-5" />
+                    Ask Nudge
+                  </button>
+                  <button
+                    onClick={() => setMobileTab('events')}
+                    className={cn(
+                      'flex flex-col items-center gap-1 py-2 text-[11px] font-medium transition-colors',
+                      mobileTab === 'events'
+                        ? 'text-brand'
+                        : 'text-app-subtle'
+                    )}
+                  >
+                    <Sparkles className="h-5 w-5" />
+                    Events
+                  </button>
+                </div>
+              </nav>
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 overflow-auto">
+            <GroupTab onBack={() => setActiveTab('suggestions')} />
           </div>
-        </>
-      ) : (
-        <div className="flex-1 overflow-auto">
-          <GroupTab onBack={() => setActiveTab('suggestions')} />
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

@@ -1,9 +1,7 @@
 'use client'
 
-import { Sparkles } from 'lucide-react'
 import { EventCard } from './event-card'
 import { EventSuggestion } from '@/lib/mockData'
-import { Skeleton } from '@/components/ui/skeleton'
 
 interface SuggestionsPanelProps {
   suggestions: EventSuggestion[]
@@ -22,46 +20,78 @@ export function SuggestionsPanel({
   onTellMeMore,
   onApproveRearrangement,
 }: SuggestionsPanelProps) {
+  // Split suggestions into top matches (in free window) and later
+  const topMatches = suggestions.filter(s => s.matchScore >= 50).slice(0, 3)
+  const laterEvents = suggestions.filter(s => s.matchScore < 50).slice(0, 3)
+
   return (
-    <div className="flex flex-col gap-2 sm:gap-3">
-      <div className="flex items-center gap-2">
-        <Sparkles className="h-4 w-4 text-primary sm:h-5 sm:w-5" />
-        <h2 className="text-base font-semibold text-foreground sm:text-lg">Today&apos;s Suggestions</h2>
+    <div className="flex flex-col">
+      {/* Free window card placeholder */}
+      <div className="mb-4 flex items-center gap-3 rounded-2xl border border-app-border bg-app-card p-3.5">
+        <div className="grid h-[38px] w-[38px] flex-shrink-0 place-items-center rounded-xl bg-brand-bg text-brand">
+          <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <rect x="3" y="4" width="18" height="18" rx="2" />
+            <path d="M16 2v4M8 2v4M3 10h18" />
+          </svg>
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="mb-0.5 text-[11px] font-medium uppercase tracking-[0.06em] text-app-muted">
+            NEXT FREE WINDOW
+          </p>
+          <p className="text-[16px] font-medium text-app-text">12:00 PM - 2:00 PM</p>
+        </div>
+        <span className="flex-shrink-0 rounded-full bg-app-surface px-2.5 py-1 text-[12px] font-medium text-app-muted">
+          2 hrs
+        </span>
       </div>
 
       {isLoading ? (
-        <div className="space-y-2 sm:space-y-3">
+        <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="rounded-lg border border-border bg-card p-3 sm:p-4">
-              <div className="flex items-start justify-between gap-2 sm:gap-3">
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-20 sm:h-5 sm:w-24" />
-                  <Skeleton className="h-4 w-36 sm:h-5 sm:w-48" />
-                  <Skeleton className="h-3 w-24 sm:h-4 sm:w-32" />
-                  <Skeleton className="h-3 w-full sm:h-4" />
-                </div>
-                <Skeleton className="h-10 w-10 rounded-lg sm:h-12 sm:w-12" />
-              </div>
-              <div className="mt-3 flex flex-col gap-2 sm:mt-4 sm:flex-row">
-                <Skeleton className="h-8 flex-1" />
-                <Skeleton className="h-8 sm:w-28" />
-              </div>
-            </div>
+            <div key={i} className="h-[180px] animate-pulse rounded-2xl border border-app-border bg-app-card" />
           ))}
         </div>
       ) : (
-        <div className="space-y-2 sm:space-y-3">
-          {suggestions.slice(0, 3).map((suggestion) => (
-            <EventCard
-              key={suggestion.event.id}
-              suggestion={suggestion}
-              isAdded={addedEventIds.has(suggestion.event.id)}
-              onAddToCalendar={onAddToCalendar}
-              onTellMeMore={onTellMeMore}
-              onApproveRearrangement={onApproveRearrangement}
-            />
-          ))}
-        </div>
+        <>
+          {/* Top matches section */}
+          <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.08em] text-app-muted">
+            SUGGESTED FOR YOUR FREE WINDOW
+          </p>
+          
+          {topMatches.length === 0 ? (
+            <p className="py-10 text-center text-[13px] text-app-muted">No events match this filter</p>
+          ) : (
+            topMatches.map((suggestion) => (
+              <EventCard
+                key={suggestion.event.id}
+                suggestion={suggestion}
+                isAdded={addedEventIds.has(suggestion.event.id)}
+                onAddToCalendar={onAddToCalendar}
+                onTellMeMore={onTellMeMore}
+                onApproveRearrangement={onApproveRearrangement}
+              />
+            ))
+          )}
+
+          {/* Later events section */}
+          {laterEvents.length > 0 && (
+            <>
+              <p className="mb-3 mt-5 text-[11px] font-medium uppercase tracking-[0.08em] text-app-muted">
+                LATER TODAY
+              </p>
+              {laterEvents.map((suggestion) => (
+                <EventCard
+                  key={suggestion.event.id}
+                  suggestion={suggestion}
+                  isAdded={addedEventIds.has(suggestion.event.id)}
+                  onAddToCalendar={onAddToCalendar}
+                  onTellMeMore={onTellMeMore}
+                  onApproveRearrangement={onApproveRearrangement}
+                />
+              ))}
+            </>
+          )}
+        </>
       )}
     </div>
   )

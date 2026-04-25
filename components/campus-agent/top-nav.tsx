@@ -1,18 +1,8 @@
 'use client'
 
-import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { Settings, Moon, Sun, RotateCcw } from 'lucide-react'
 import { useTheme } from 'next-themes'
-import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { useEffect, useState } from 'react'
 
 interface TopNavProps {
   activeTab: 'suggestions' | 'group'
@@ -23,116 +13,38 @@ interface TopNavProps {
 }
 
 export function TopNav({ activeTab, onTabChange, onReset, userName, userEmail }: TopNavProps) {
-  const { theme, setTheme } = useTheme()
+  const { resolvedTheme, setTheme } = useTheme()
   const searchParams = useSearchParams()
   const isDemo = searchParams.get('demo') === '1'
+  const [mounted, setMounted] = useState(false)
   
-  // Get initials from name
-  const getInitials = (name?: string) => {
-    if (!name) return 'U'
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-  }
+  useEffect(() => setMounted(true), [])
+  const isDark = mounted && resolvedTheme === 'dark'
   
   // Profile URL - preserves demo mode if active
   const profileUrl = isDemo ? '/profile?demo=1' : '/profile'
 
   return (
-    <header className="flex flex-col gap-2 border-b border-border bg-card px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-3">
-      {/* Top row: Logo + Nav + Profile */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3 sm:gap-8">
-          <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary sm:h-8 sm:w-8">
-              <span className="text-xs font-bold text-primary-foreground sm:text-sm">CA</span>
-            </div>
-            <span className="text-base font-semibold text-foreground sm:text-lg">Nudge</span>
-          </div>
-
-          <nav className="flex items-center gap-1">
-            <Button
-              variant={activeTab === 'suggestions' ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => onTabChange('suggestions')}
-              className="h-7 px-2 text-xs sm:h-8 sm:px-3 sm:text-sm"
-            >
-              Suggestions
-            </Button>
-            <Button
-              variant={activeTab === 'group' ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => onTabChange('group')}
-              className="h-7 px-2 text-xs sm:h-8 sm:px-3 sm:text-sm"
-            >
-              Group
-            </Button>
-          </nav>
-        </div>
-
-        {/* Right side controls */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Agent status - hidden on small screens */}
-          <div className="hidden items-center gap-2 rounded-full bg-success/10 px-3 py-1.5 sm:flex">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75"></span>
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-success"></span>
-            </span>
-            <span className="text-xs font-medium text-success">Agent active</span>
-          </div>
-
-          {/* Mobile: just show green dot */}
-          <div className="flex items-center sm:hidden">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75"></span>
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-success"></span>
-            </span>
-          </div>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
-                <Settings className="h-4 w-4" />
-                <span className="sr-only">Settings</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-                {theme === 'dark' ? (
-                  <>
-                    <Sun className="mr-2 h-4 w-4" />
-                    Light mode
-                  </>
-                ) : (
-                  <>
-                    <Moon className="mr-2 h-4 w-4" />
-                    Dark mode
-                  </>
-                )}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onReset}>
-                <RotateCcw className="mr-2 h-4 w-4" />
-                Reset demo
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Profile - compact on mobile */}
-          <Link href={profileUrl} className="flex items-center gap-1.5 rounded-full border border-border px-1.5 py-1 transition-colors hover:bg-muted sm:gap-2 sm:px-2">
-            <Avatar className="h-6 w-6 sm:h-7 sm:w-7">
-              <AvatarFallback className="bg-primary text-[10px] text-primary-foreground sm:text-xs">
-                {getInitials(userName)}
-              </AvatarFallback>
-            </Avatar>
-            {/* Show name only on larger screens */}
-            <div className="hidden flex-col sm:flex">
-              <span className="text-sm font-medium leading-tight text-foreground">{userName || 'User'}</span>
-              {userEmail && (
-                <span className="text-xs leading-tight text-muted-foreground">{userEmail}</span>
-              )}
-            </div>
-          </Link>
-        </div>
+    <header className="flex items-start justify-between px-5 pt-4 pb-3">
+      <div>
+        <p className="mb-0.5 text-[11px] font-medium uppercase tracking-[0.08em] text-app-muted">
+          {activeTab === 'suggestions' ? 'YOUR NUDGES' : 'GROUP VIEW'}
+        </p>
+        <h1 className="text-[22px] font-medium tracking-tight text-app-text">
+          Your <span className="text-brand">Nudges</span>
+        </h1>
       </div>
+      
+      {/* Dark mode toggle */}
+      <button
+        type="button"
+        onClick={() => setTheme(isDark ? 'light' : 'dark')}
+        aria-label="Toggle dark mode"
+        className="relative mt-1 h-[27px] w-[46px] flex-shrink-0"
+      >
+        <span className={`absolute inset-0 rounded-full transition-colors ${isDark ? 'bg-brand' : 'bg-app-border-strong'}`} />
+        <span className={`absolute top-[2px] h-[23px] w-[23px] rounded-full border-[0.5px] border-black/10 bg-white transition-all ${isDark ? 'left-[21px]' : 'left-[2px]'}`} />
+      </button>
     </header>
   )
 }
