@@ -165,7 +165,7 @@ async def _call_gemini_chat(
         contents.append({"role": role, "parts": [{"text": m.content}]})
     url = (
         "https://generativelanguage.googleapis.com/v1beta/models/"
-        f"gemini-2.0-flash:generateContent?key={key}"
+        f"gemini-2.5-flash:generateContent?key={key}"
     )
     async with httpx.AsyncClient(timeout=20.0) as client:
         resp = await client.post(
