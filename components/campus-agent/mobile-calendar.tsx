@@ -19,6 +19,7 @@ interface MobileCalendarProps {
   suggestions: EventSuggestion[]
   addedEventIds: Set<string>
   onAddToCalendar?: (eventId: string) => void
+  jumpToDate?: Date | null
 }
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -26,7 +27,7 @@ const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 // Fixed reference date for SSR
 const FIXED_REFERENCE_DATE = new Date('2026-04-20T12:00:00')
 
-export function MobileCalendar({ events, suggestions, addedEventIds, onAddToCalendar }: MobileCalendarProps) {
+export function MobileCalendar({ events, suggestions, addedEventIds, onAddToCalendar, jumpToDate }: MobileCalendarProps) {
   const [selectedDay, setSelectedDay] = useState(new Date().getDay())
   const [isClient, setIsClient] = useState(false)
   const [weekOffset, setWeekOffset] = useState(0)
@@ -35,6 +36,22 @@ export function MobileCalendar({ events, suggestions, addedEventIds, onAddToCale
     setSelectedDay(new Date().getDay())
     setIsClient(true)
   }, [])
+
+  // Jump to the week + day of newly added event
+  useEffect(() => {
+    if (jumpToDate) {
+      const target = new Date(jumpToDate)
+      const today = new Date()
+      const todayWeekStart = startOfWeek(today, { weekStartsOn: 0 })
+      const targetWeekStart = startOfWeek(target, { weekStartsOn: 0 })
+      const diffWeeks = Math.round(
+        (targetWeekStart.getTime() - todayWeekStart.getTime()) / (7 * 24 * 60 * 60 * 1000),
+      )
+      console.log('[MobileCalendar] jumping to', target, 'weekOffset:', diffWeeks)
+      setWeekOffset(diffWeeks)
+      setSelectedDay(target.getDay())
+    }
+  }, [jumpToDate])
 
   const weekStart = useMemo(() => {
     const base = startOfWeek(isClient ? new Date() : FIXED_REFERENCE_DATE, { weekStartsOn: 0 })

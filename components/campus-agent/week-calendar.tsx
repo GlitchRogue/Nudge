@@ -11,6 +11,7 @@ interface WeekCalendarProps {
   suggestions: EventSuggestion[]
   addedEventIds: Set<string>
   onAddToCalendar?: (eventId: string) => void
+  jumpToDate?: Date | null
 }
 
 const HOURS = Array.from({ length: 18 }, (_, i) => i + 6) // 6 AM to 11 PM (18 hours)
@@ -20,7 +21,7 @@ const DAYS = Array.from({ length: 7 }, (_, i) => i) // Sun to Sat
 // Use a fixed reference date for SSR to avoid hydration mismatches
 const FIXED_REFERENCE_DATE = new Date('2026-04-20T12:00:00')
 
-export function WeekCalendar({ events, suggestions, addedEventIds, onAddToCalendar }: WeekCalendarProps) {
+export function WeekCalendar({ events, suggestions, addedEventIds, onAddToCalendar, jumpToDate }: WeekCalendarProps) {
   // Start with fixed date for SSR, then update to real date on client
   const [currentDate, setCurrentDate] = useState(FIXED_REFERENCE_DATE)
   const [isClient, setIsClient] = useState(false)
@@ -29,6 +30,14 @@ export function WeekCalendar({ events, suggestions, addedEventIds, onAddToCalend
     setCurrentDate(new Date())
     setIsClient(true)
   }, [])
+
+  // Jump to the week containing the newly added event
+  useEffect(() => {
+    if (jumpToDate) {
+      console.log('[WeekCalendar] jumping to', jumpToDate)
+      setCurrentDate(new Date(jumpToDate))
+    }
+  }, [jumpToDate])
   
   const weekStart = useMemo(() => startOfWeek(currentDate, { weekStartsOn: 0 }), [currentDate])
 

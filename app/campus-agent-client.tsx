@@ -43,6 +43,7 @@ export default function CampusAgentClient({
     !initialSuggestions || initialSuggestions.length === 0,
   )
   const [addedEventIds, setAddedEventIds] = useState<Set<string>>(new Set())
+  const [jumpToDate, setJumpToDate] = useState<Date | null>(null)
 
   // On mount, hit the backend for real ranked events. The backend session
   // cookie is acquired by signing in (real Google or /auth/demo) — if there's
@@ -121,6 +122,15 @@ export default function CampusAgentClient({
           next.delete(eventId)
         } else {
           next.add(eventId)
+          // Jump calendar to the week of the newly added event
+          const sug = suggestions.find((s) => s.event.id === eventId)
+          if (sug) {
+            console.log('[Nudge] adding event, jumping calendar to', sug.event.startTime)
+            // New Date object every time so useEffect re-fires even on same date
+            setJumpToDate(new Date(sug.event.startTime.getTime()))
+            // On mobile, jump to calendar tab so user immediately sees it
+            setMobileTab('calendar')
+          }
         }
         if (backendEnabled) {
           apiActions
@@ -132,7 +142,7 @@ export default function CampusAgentClient({
         return next
       })
     },
-    [backendEnabled],
+    [backendEnabled, suggestions],
   )
 
   const handleTellMeMore = useCallback((eventId: string) => {
@@ -197,6 +207,7 @@ export default function CampusAgentClient({
                   suggestions={suggestions}
                   addedEventIds={addedEventIds}
                   onAddToCalendar={handleAddToCalendar}
+                  jumpToDate={jumpToDate}
                 />
               </div>
             </div>
@@ -212,6 +223,7 @@ export default function CampusAgentClient({
                       suggestions={suggestions}
                       addedEventIds={addedEventIds}
                       onAddToCalendar={handleAddToCalendar}
+                      jumpToDate={jumpToDate}
                     />
                   </div>
                 )}
