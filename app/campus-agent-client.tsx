@@ -6,6 +6,7 @@ import { TopNav } from '@/components/campus-agent/top-nav'
 import { SuggestionsPanel } from '@/components/campus-agent/suggestions-panel'
 import { ChatInterface } from '@/components/campus-agent/chat-interface'
 import { WeekCalendar } from '@/components/campus-agent/week-calendar'
+import { MobileCalendar } from '@/components/campus-agent/mobile-calendar'
 import { GroupTab } from '@/components/campus-agent/group-tab'
 import { generateSuggestions } from '@/lib/agent'
 import { cn } from '@/lib/utils'
@@ -133,8 +134,8 @@ export default function CampusAgentClient({
             {/* Mobile Tab Content */}
             <div className="min-h-0 flex-1 overflow-hidden">
               {mobileTab === 'calendar' && (
-                <div className="h-full overflow-auto p-3">
-                  <WeekCalendar
+                <div className="h-full overflow-hidden p-3">
+                  <MobileCalendar
                     events={calendarEvents}
                     suggestions={suggestions}
                     addedEventIds={addedEventIds}
