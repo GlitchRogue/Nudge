@@ -19,6 +19,8 @@ export default async function ProfilePage({ searchParams }: PageProps) {
   if (isDemo) {
     const mockProfile = {
       interests: mockUserProfile.interests,
+      bio: "CS junior passionate about AI/ML and building cool things. Love playing basketball and capturing moments through photography.",
+      createdAt: "2026-01-15T00:00:00.000Z",
     }
     const mockSession = {
       user: {

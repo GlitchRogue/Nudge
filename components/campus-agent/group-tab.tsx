@@ -11,9 +11,8 @@ import {
   groupMembers,
   availableEvents,
   sourceBadgeColors,
-  formatEventTime,
-  formatEventDate,
 } from '@/lib/mockData'
+import { ClientTime } from '@/components/ui/client-time'
 
 interface GroupTabProps {
   onBack: () => void
@@ -148,8 +147,7 @@ export function GroupTab({ onBack }: GroupTabProps) {
                       {groupMatchEvent.description}
                     </p>
                     <div className="mt-3 flex items-center gap-4 text-sm text-muted-foreground">
-                      <span>{formatEventDate(groupMatchEvent.startTime)}</span>
-                      <span>{formatEventTime(groupMatchEvent.startTime)}</span>
+                      <ClientTime date={groupMatchEvent.startTime} />
                       <span>{groupMatchEvent.location}</span>
                     </div>
 
