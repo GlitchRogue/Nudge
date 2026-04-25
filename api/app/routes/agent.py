@@ -111,6 +111,65 @@ General chat about student life is fine, but always ground event mentions in the
 """
 
 
+# Keyword → list of synonyms/related terms to match against title + tags + description
+QUERY_KEYWORDS = {
+    "food": ["food", "meal", "dinner", "lunch", "breakfast", "eat", "pizza", "snack", "free food", "cuisine", "taste", "culinary", "dining"],
+    "movie": ["movie", "film", "cinema", "screening", "watch"],
+    "music": ["music", "concert", "band", "dj", "jazz", "orchestra", "singing", "choir", "perform", "live"],
+    "tech": ["tech", "technology", "ai", "machine learning", "ml", "coding", "hackathon", "engineer", "software", "data", "computer", "cs", "startup"],
+    "career": ["career", "job", "intern", "internship", "recruit", "recruiter", "professional", "resume", "linkedin", "networking"],
+    "finance": ["finance", "investing", "stock", "vc", "venture", "banking", "wall street", "private equity", "trading"],
+    "sport": ["sport", "basketball", "soccer", "football", "tennis", "yoga", "run", "gym", "fitness", "intramural"],
+    "art": ["art", "gallery", "museum", "painting", "sculpture", "exhibit", "creative", "design"],
+    "social": ["social", "party", "meetup", "mixer", "hangout", "happy hour", "club", "friend"],
+    "academic": ["lecture", "seminar", "talk", "research", "academic", "professor", "class", "study"],
+    "free": ["free", "no cost", "complimentary"],
+}
+
+
+def _filter_events_by_query(events: list[Event], query: str) -> list[Event]:
+    """Filter events whose title/tags/description match keywords inferred from the user's query.
+    Returns up to 20 most relevant events. If query has no keywords, returns top 20 ranked.
+    """
+    if not query.strip() or len(events) == 0:
+        return events[:20]
+
+    # Find which keyword categories the user is asking about
+    matched_terms: set[str] = set()
+    for category, terms in QUERY_KEYWORDS.items():
+        for term in terms:
+            if term in query:
+                matched_terms.update(QUERY_KEYWORDS[category])
+                break
+
+    # If no category matched, also try raw words from the query (>=4 chars) directly
+    if not matched_terms:
+        words = [w.strip(".,!?;:\"'") for w in query.split() if len(w) >= 4]
+        matched_terms.update(words)
+
+    if not matched_terms:
+        return events[:20]
+
+    # Score each event by how many query terms appear in its title/tags/description
+    def event_score(ev: Event) -> int:
+        haystack = f"{ev.title} {' '.join(ev.tags or [])} {ev.description or ''}".lower()
+        # Special case: "free" should also match cost == 0
+        score = sum(1 for t in matched_terms if t in haystack)
+        if "free" in matched_terms and (ev.cost or 0) == 0:
+            score += 1
+        return score
+
+    scored = [(event_score(ev), i, ev) for i, ev in enumerate(events)]
+    # Keep order stability for same score; prefer higher score
+    scored.sort(key=lambda x: (-x[0], x[1]))
+    matched = [ev for s, _, ev in scored if s > 0][:20]
+
+    # If filtering removed everything, fall back to top 10 ranked
+    if not matched:
+        return events[:10]
+    return matched
+
+
 def _format_event_context(events: list[Event], user: User) -> str:
     """Build a short context string of upcoming events for the LLM."""
     lines = []
@@ -215,11 +274,15 @@ async def chat(
     calendar = db.query(CalendarEntry).filter(CalendarEntry.user_id == user.id).all()
     actions = db.query(Action).filter(Action.user_id == user.id).all()
     ranked = rank_events(events, user, calendar, actions)
-    # Be generous with context — give the LLM ~20 events whether or not they conflict
-    top_events = [r["event"] for r in ranked[:20]]
-    # Fallback: if ranker filtered too aggressively, use raw upcoming events
-    if len(top_events) < 5:
-        top_events = events[:20]
+    ranked_events = [r["event"] for r in ranked]
+    if len(ranked_events) < 5:
+        ranked_events = events
+
+    # Pre-filter events by the user's last message so Gemini only sees relevant ones.
+    last_user_msg = next(
+        (m.content for m in reversed(body.messages) if m.role == "user"), ""
+    ).lower()
+    top_events = _filter_events_by_query(ranked_events, last_user_msg)
 
     context = _format_event_context(top_events, user)
     system = CHAT_SYSTEM + "\n\n" + context
