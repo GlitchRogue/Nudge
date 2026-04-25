@@ -1,89 +1,57 @@
-import { redirect } from "next/navigation"
-import { auth } from "@/auth"
-import { fetchGoogleCalendarEvents } from "@/lib/google-calendar"
-import { calendarEvents as mockCalendarEvents, userProfile as mockUserProfile } from "@/lib/mockData"
-import { getProfile } from "@/lib/profile"
-import { searchEvents } from "@/lib/event-search"
-import CampusAgentClient from "./campus-agent-client"
+"use client"
 
-interface PageProps {
-  searchParams: Promise<{ demo?: string }>
+import { useEffect, useState } from 'react'
+import { format } from 'date-fns'
+import { AppHeader } from '@/components/AppHeader'
+import { BottomNav, type Tab } from '@/components/BottomNav'
+import { HomeScreen } from '@/components/screens/HomeScreen'
+import { WeekScreen } from '@/components/screens/WeekScreen'
+import { AskScreen } from '@/components/screens/AskScreen'
+import { SettingsScreen } from '@/components/screens/SettingsScreen'
+import { getNextFreeSlot, type FreeSlot } from '@/lib/free-slots'
+
+const STATIC_EYEBROWS: Record<Exclude<Tab, 'home'>, string> = {
+  week:     'WEEKLY LINEUP',
+  ask:      'ASK NUDGE',
+  settings: 'PROFILE & PREFERENCES',
 }
 
-export default async function Page({ searchParams }: PageProps) {
-  const params = await searchParams
-  const isDemo = params.demo === "1"
+function formatSlotForEyebrow(slot: FreeSlot): string {
+  const day = format(slot.start, 'EEEE').toUpperCase()
+  const start = format(slot.start, 'h')
+  const end = format(slot.end, 'h')
+  const startSuffix = format(slot.start, 'a').toUpperCase()
+  const endSuffix = format(slot.end, 'a').toUpperCase()
+  return startSuffix === endSuffix
+    ? `${day} · FREE ${start}—${end}${endSuffix}`
+    : `${day} · FREE ${start}${startSuffix}—${end}${endSuffix}`
+}
 
-  // Demo mode: skip auth and use mock data
-  if (isDemo) {
-    // Use mock data for demo mode
-    let suggestions: Awaited<ReturnType<typeof searchEvents>> = []
-    try {
-      suggestions = await searchEvents(mockUserProfile, mockCalendarEvents)
-    } catch (err) {
-      console.error("[Nudge] Demo suggestion generation failed:", err)
-    }
+export default function Page() {
+  const [tab, setTab] = useState<Tab>('home')
+  const [slot, setSlot] = useState<FreeSlot | null>(null)
 
-    return (
-      <CampusAgentClient
-        calendarEvents={mockCalendarEvents}
-        initialSuggestions={suggestions}
-        userName={mockUserProfile.name}
-        userEmail="demo@stanford.edu"
-        profileInterests={mockUserProfile.interests}
-      />
-    )
-  }
+  useEffect(() => {
+    setSlot(getNextFreeSlot())
+  }, [])
 
-  const session = await auth()
-
-  // Not signed in → bounce to login
-  if (!session?.user) {
-    redirect("/login")
-  }
-
-  // Signed in but no profile yet → bounce to onboarding
-  const profile = await getProfile()
-  if (!profile) {
-    redirect("/onboarding")
-  }
-
-  // Try to fetch real Google Calendar events.
-  // If the API call fails (token issue, scope missing, network), fall back
-  // to mocks so the demo never breaks. If it succeeds (even with 0 events),
-  // use real data.
-  let events = mockCalendarEvents
-  let usedRealData = false
-  if (session.accessToken) {
-    try {
-      const real = await fetchGoogleCalendarEvents(session.accessToken)
-      events = real
-      usedRealData = true
-      console.log(`[Nudge] Loaded ${real.length} real calendar events`)
-    } catch (err) {
-      console.error("[Nudge] Calendar fetch failed, using mock data:", err)
-    }
-  }
-  console.log(
-    `[Nudge] usedRealData=${usedRealData}, eventCount=${events.length}`,
-  )
-
-  // Generate personalized event suggestions based on the user's profile
-  // and existing schedule. Falls back to empty array on error.
-  let suggestions: Awaited<ReturnType<typeof searchEvents>> = []
-  try {
-    suggestions = await searchEvents(profile, events)
-  } catch (err) {
-    console.error("[Nudge] Suggestion generation failed:", err)
-  }
+  const eyebrow =
+    tab === 'home'
+      ? slot ? formatSlotForEyebrow(slot) : 'TODAY'
+      : STATIC_EYEBROWS[tab]
 
   return (
-    <CampusAgentClient
-      calendarEvents={events}
-      initialSuggestions={suggestions}
-      userName={session.user.name ?? undefined}
-      userEmail={session.user.email ?? undefined}
-      profileInterests={profile.interests}
-    />
+    <div className="min-h-screen bg-app-surface flex justify-center">
+      <div className="w-full max-w-md min-h-screen flex flex-col bg-app-bg relative">
+        <AppHeader eyebrow={eyebrow} />
+        <main className="flex-1 px-5 pb-24">
+          {tab === 'home'     && <HomeScreen free-slots={slot} />}
+          {tab === 'week'     && <WeekScreen />}
+          {tab === 'ask'      && <AskScreen />}
+          {tab === 'settings' && <SettingsScreen />}
+        </main>
+        <BottomNav active={tab} onChange={setTab} />
+      </div>
+    </div>
   )
 }

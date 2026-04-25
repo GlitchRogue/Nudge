@@ -2,7 +2,7 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { auth } from "@/auth"
 import { getProfile, INTEREST_OPTIONS } from "@/lib/profile"
-import { userProfile as mockUserProfile } from "@/lib/mockData"
+import { userProfile as mockUserProfile } from "@/lib/mock"
 import ProfileForm from "./profile-form"
 import { resetProfile, signOutAction } from "./actions"
 

@@ -1,4 +1,4 @@
-import type { CalendarEvent } from "./mockData"
+import type { CalendarEvent } from "./mock"
 
 interface GoogleCalendarEvent {
   id: string

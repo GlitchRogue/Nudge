@@ -9,7 +9,7 @@ import { WeekCalendar } from '@/components/campus-agent/week-calendar'
 import { GroupTab } from '@/components/campus-agent/group-tab'
 import { generateSuggestions } from '@/lib/agent'
 import { cn } from '@/lib/utils'
-import type { CalendarEvent, EventSuggestion } from '@/lib/mockData'
+import type { CalendarEvent, EventSuggestion } from '@/lib/mock'
 
 type MobileTab = 'calendar' | 'chat' | 'events'
 

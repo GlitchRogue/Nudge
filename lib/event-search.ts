@@ -3,7 +3,7 @@ import type {
   EventSuggestion,
   AvailableEvent,
   EventSource,
-} from "./mockData"
+} from "./mock"
 import type { NudgeProfile } from "./profile"
 
 /**
