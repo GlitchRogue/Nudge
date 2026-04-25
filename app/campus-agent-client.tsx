@@ -24,6 +24,8 @@ interface CampusAgentClientProps {
   profileInterests?: string[]
   /** When true, the client will hit the FastAPI backend for ranked events */
   backendEnabled?: boolean
+  /** Server-side error from Google Calendar fetch (e.g. expired token). */
+  calendarError?: string | null
 }
 
 export default function CampusAgentClient({
@@ -33,6 +35,7 @@ export default function CampusAgentClient({
   userEmail,
   profileInterests,
   backendEnabled,
+  calendarError,
 }: CampusAgentClientProps) {
   const [activeTab, setActiveTab] = useState<'suggestions' | 'group'>('suggestions')
   const [mobileTab, setMobileTab] = useState<MobileTab>('chat') // Default to chat
@@ -204,6 +207,20 @@ export default function CampusAgentClient({
           layoutMode={layoutMode}
           onLayoutModeChange={handleLayoutModeChange}
         />
+
+        {calendarError && (
+          <div className="mx-5 mb-2 flex items-start justify-between gap-3 rounded-lg border border-amber-300/50 bg-amber-100/80 px-3 py-2 text-[12px] text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+            <span>
+              Couldn't load your Google Calendar. Sign out and back in to refresh access.
+            </span>
+            <a
+              href="/api/auth/signout?callbackUrl=/login"
+              className="shrink-0 rounded-md border border-amber-400/60 px-2 py-0.5 font-medium hover:bg-amber-200/60 dark:hover:bg-amber-500/20"
+            >
+              Sign out
+            </a>
+          </div>
+        )}
 
         {activeTab === 'suggestions' ? (
           <>

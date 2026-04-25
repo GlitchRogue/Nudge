@@ -43,22 +43,29 @@ export default async function Page({ searchParams }: PageProps) {
   }
 
   // Fetch user's existing Google Calendar events on the server (we have the
-  // accessToken here). Fall back to empty array (no mocks) if the API call
-  // fails so users can clearly see when their real calendar is empty vs broken.
+  // accessToken here). Surface a clear error to the client when the call
+  // fails so the user knows to re-auth instead of staring at empty cells.
   let events: typeof mockCalendarEvents = []
-  if (session.accessToken) {
+  let calendarError: string | null = null
+  const sessionError = (session as any).error as string | undefined
+  if (sessionError) {
+    calendarError = `auth: ${sessionError}`
+    console.warn(`[Nudge] Session has auth error: ${sessionError}`)
+  }
+  if (session.accessToken && !sessionError) {
     try {
       const real = await fetchGoogleCalendarEvents(session.accessToken)
       events = real
       console.log(`[Nudge] Loaded ${real.length} events from Google Calendar for ${session.user.email}`)
-    } catch (err) {
-      console.error("[Nudge] Calendar fetch failed:", err)
-      // Leave events empty so the calendar reads as empty (real state) rather
-      // than misleading the user with mock data.
+    } catch (err: any) {
+      const msg = err?.message ?? String(err)
+      console.error("[Nudge] Calendar fetch failed:", msg)
+      calendarError = msg
       events = []
     }
-  } else {
+  } else if (!session.accessToken) {
     console.warn("[Nudge] No accessToken on session — cannot fetch Google Calendar")
+    calendarError = "No access token — sign out and back in"
   }
 
   // Initial suggestions: local fallback. The client will immediately
@@ -76,6 +83,7 @@ export default async function Page({ searchParams }: PageProps) {
       userEmail={session.user.email ?? undefined}
       profileInterests={profile.interests}
       backendEnabled
+      calendarError={calendarError}
     />
   )
 }

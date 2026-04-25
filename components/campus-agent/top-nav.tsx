@@ -3,7 +3,8 @@
 import { useSearchParams } from 'next/navigation'
 import { useTheme } from 'next-themes'
 import { useEffect, useState } from 'react'
-import { Smartphone, Monitor } from 'lucide-react'
+import { Smartphone, Monitor, LogOut } from 'lucide-react'
+import { signOut } from 'next-auth/react'
 
 export type LayoutMode = 'auto' | 'mobile' | 'desktop'
 
@@ -87,6 +88,19 @@ export function TopNav({ activeTab, onTabChange, onReset, userName, userEmail, l
           <span className={`absolute inset-0 rounded-full transition-colors ${isDark ? 'bg-brand' : 'bg-app-border-strong'}`} />
           <span className={`absolute top-[2px] h-[23px] w-[23px] rounded-full border-[0.5px] border-black/10 bg-white transition-all ${isDark ? 'left-[21px]' : 'left-[2px]'}`} />
         </button>
+
+        {/* Sign out (only when actually signed in, not in demo) */}
+        {!isDemo && userEmail && (
+          <button
+            type="button"
+            onClick={() => signOut({ callbackUrl: '/login' })}
+            aria-label="Sign out"
+            title={`Sign out ${userEmail}`}
+            className="flex h-[27px] w-[27px] items-center justify-center rounded-full border border-app-border-strong bg-app-card text-app-muted hover:text-app-text"
+          >
+            <LogOut className="h-3 w-3" />
+          </button>
+        )}
       </div>
     </header>
   )
