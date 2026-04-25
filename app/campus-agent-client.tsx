@@ -87,12 +87,13 @@ export default function CampusAgentClient({
       />
 
       {activeTab === 'suggestions' ? (
-        <div className="flex flex-1 overflow-hidden">
-          {/* Left Panel - 60% */}
-          <div className="flex w-[60%] flex-col overflow-hidden border-r border-border">
+        <div className="flex flex-1 flex-col overflow-hidden lg:flex-row">
+          {/* Left Panel - Full width on mobile, 60% on desktop */}
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:w-[60%] lg:flex-none lg:border-r lg:border-border">
+            {/* Suggestions - scrollable section */}
             <div
-              className="flex-shrink-0 overflow-auto border-b border-border p-4"
-              style={{ maxHeight: '45%' }}
+              className="flex-shrink-0 overflow-auto border-b border-border p-3 sm:p-4"
+              style={{ maxHeight: '40vh' }}
             >
               <SuggestionsPanel
                 suggestions={suggestions}
@@ -104,13 +105,14 @@ export default function CampusAgentClient({
               />
             </div>
 
-            <div className="flex-1 overflow-hidden p-4">
+            {/* Chat - takes remaining space */}
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-3 sm:p-4">
               <ChatInterface />
             </div>
           </div>
 
-          {/* Right Panel - Calendar 40% */}
-          <div className="w-[40%] overflow-hidden p-4">
+          {/* Right Panel - Calendar: Hidden on mobile, 40% on desktop */}
+          <div className="hidden overflow-hidden p-4 lg:block lg:w-[40%]">
             <WeekCalendar
               events={calendarEvents}
               suggestions={suggestions}

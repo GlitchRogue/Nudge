@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { addDays, startOfWeek, format, isSameDay, isToday } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { CalendarEvent, EventSuggestion } from '@/lib/mockData'
@@ -14,8 +14,20 @@ interface WeekCalendarProps {
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 7) // 7 AM to 8 PM
 const DAYS = Array.from({ length: 7 }, (_, i) => i) // Sun to Sat
 
+// Use a fixed reference date for SSR to avoid hydration mismatches
+const FIXED_REFERENCE_DATE = new Date('2026-04-20T12:00:00')
+
 export function WeekCalendar({ events, suggestions, addedEventIds }: WeekCalendarProps) {
-  const weekStart = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 0 }), [])
+  // Start with fixed date for SSR, then update to real date on client
+  const [currentDate, setCurrentDate] = useState(FIXED_REFERENCE_DATE)
+  const [isClient, setIsClient] = useState(false)
+  
+  useEffect(() => {
+    setCurrentDate(new Date())
+    setIsClient(true)
+  }, [])
+  
+  const weekStart = useMemo(() => startOfWeek(currentDate, { weekStartsOn: 0 }), [currentDate])
 
   const getEventStyle = (startTime: Date, endTime: Date) => {
     const startHour = startTime.getHours() + startTime.getMinutes() / 60
@@ -71,7 +83,8 @@ export function WeekCalendar({ events, suggestions, addedEventIds }: WeekCalenda
         <div className="w-14 flex-shrink-0" />
         {DAYS.map((dayOffset) => {
           const date = addDays(weekStart, dayOffset)
-          const isCurrentDay = isToday(date)
+          // Only highlight today after client hydration
+          const isCurrentDay = isClient && isToday(date)
           return (
             <div
               key={dayOffset}
@@ -101,7 +114,7 @@ export function WeekCalendar({ events, suggestions, addedEventIds }: WeekCalenda
           {HOURS.map((hour) => (
             <div key={hour} className="relative h-12">
               <span className="absolute -top-2 right-2 text-xs text-muted-foreground">
-                {format(new Date().setHours(hour, 0), 'h a')}
+                {hour === 12 ? '12 PM' : hour > 12 ? `${hour - 12} PM` : `${hour} AM`}
               </span>
             </div>
           ))}
@@ -121,7 +134,7 @@ export function WeekCalendar({ events, suggestions, addedEventIds }: WeekCalenda
                 key={dayOffset}
                 className={cn(
                   'relative flex-1 border-l border-border first:border-l-0',
-                  isToday(date) && 'bg-primary/5'
+                  isClient && isToday(date) && 'bg-primary/5'
                 )}
               >
                 {/* Hour lines */}

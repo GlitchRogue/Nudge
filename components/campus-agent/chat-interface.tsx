@@ -39,30 +39,30 @@ export function ChatInterface({ onSendMessage }: ChatInterfaceProps) {
   const isStreaming = status === 'streaming' || status === 'submitted'
 
   return (
-    <div className="flex h-full flex-col rounded-lg border border-border bg-card">
+    <div className="flex h-full min-h-0 flex-col rounded-lg border border-border bg-card">
       {/* Header */}
-      <div className="flex items-center gap-2 border-b border-border px-4 py-3">
-        <Bot className="h-5 w-5 text-primary" />
-        <span className="font-medium text-foreground">Chat with Agent</span>
+      <div className="flex flex-shrink-0 items-center gap-2 border-b border-border px-3 py-2 sm:px-4 sm:py-3">
+        <Bot className="h-4 w-4 text-primary sm:h-5 sm:w-5" />
+        <span className="text-sm font-medium text-foreground sm:text-base">Chat with Agent</span>
         {isStreaming && (
-          <div className="ml-auto flex items-center gap-1.5 text-sm text-muted-foreground">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          <div className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground sm:text-sm">
+            <Loader2 className="h-3 w-3 animate-spin sm:h-3.5 sm:w-3.5" />
             Thinking...
           </div>
         )}
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-auto p-4">
+      <div className="min-h-0 flex-1 overflow-auto p-3 sm:p-4">
         {messages.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center text-center">
-            <Bot className="mb-3 h-12 w-12 text-muted-foreground/30" />
-            <p className="text-sm text-muted-foreground">
+          <div className="flex h-full flex-col items-center justify-center px-4 text-center">
+            <Bot className="mb-2 h-8 w-8 text-muted-foreground/30 sm:mb-3 sm:h-12 sm:w-12" />
+            <p className="text-xs text-muted-foreground sm:text-sm">
               Ask me about events, update your preferences, or get more details about suggestions.
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {messages.map((message) => (
               <MessageBubble key={message.id} message={message} />
             ))}
@@ -72,17 +72,17 @@ export function ChatInterface({ onSendMessage }: ChatInterfaceProps) {
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSubmit} className="border-t border-border p-4">
+      <form onSubmit={handleSubmit} className="flex-shrink-0 border-t border-border p-2 sm:p-4">
         <div className="flex gap-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask about events..."
-            className="flex-1 rounded-lg border border-input bg-background px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring sm:px-4"
             disabled={isStreaming}
           />
-          <Button type="submit" size="icon" disabled={!input.trim() || isStreaming}>
+          <Button type="submit" size="icon" className="h-9 w-9 sm:h-10 sm:w-10" disabled={!input.trim() || isStreaming}>
             <Send className="h-4 w-4" />
             <span className="sr-only">Send</span>
           </Button>
